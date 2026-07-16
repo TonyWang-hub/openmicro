@@ -1,0 +1,126 @@
+<h2>Codex Micro 模拟器 v6</h2>
+<p class="subtitle">状态图例移进机身顶部：像丝印在铝板上的一排小标识，与底部内嵌日志屏呼应。</p>
+
+<style>
+.c6-stage{display:flex;justify-content:center;padding:34px 0 44px;background:radial-gradient(ellipse at 50% 30%,#fafafa,#ececee 70%);border-radius:16px;perspective:1400px}
+.c6-rig{transform-style:preserve-3d;transform:rotateX(8deg)}
+.c6-jelly{background:linear-gradient(150deg,#fcd9b8e6,#f7c9a5e6 45%,#fbe3cde6);border-radius:46px;padding:27px;box-shadow:0 4px 0 #edb287bb,0 14px 34px rgba(216,140,80,.38),0 30px 60px rgba(216,140,80,.22);transform-style:preserve-3d;position:relative}
+.c6-plate{background:linear-gradient(160deg,#f0f2f4,#dcdfe4);border-radius:28px;padding:16px 42px 20px;position:relative;box-shadow:inset 0 2px 3px #fff,inset 0 -3px 8px rgba(0,0,0,.09),0 3px 0 #c3c8ce,0 8px 14px rgba(0,0,0,.12);transform-style:preserve-3d}
+.c6-screw{position:absolute;width:15px;height:15px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#4a4d52,#17191d);box-shadow:inset 0 1px 2px rgba(255,255,255,.3)}
+.c6-screw::after{content:"";position:absolute;inset:4px;border-radius:2px;background:#0a0b0d;clip-path:polygon(0 40%,100% 40%,100% 60%,0 60%)}
+.c6-screw.tl{top:13px;left:13px}.c6-screw.tr{top:13px;right:13px}.c6-screw.bl{bottom:13px;left:13px}.c6-screw.br{bottom:13px;right:13px}
+.c6-etch{position:absolute;font-size:9px;letter-spacing:1.5px;color:#99a0a9}
+.c6-etch.left{left:15px;top:50%;writing-mode:vertical-rl;transform:rotate(180deg);translate:0 -50%}
+.c6-etch.right{right:15px;top:50%;writing-mode:vertical-rl;translate:0 -50%}
+/* 机身顶部丝印图例 */
+.c6-legend{display:flex;justify-content:center;gap:14px;padding:6px 0 12px;font-size:9px;letter-spacing:1px;color:#8a919b;text-transform:uppercase}
+.c6-legend span{display:flex;align-items:center;gap:5px}
+.c6-legend i{width:9px;height:9px;border-radius:50%;display:inline-block;box-shadow:inset 0 1px 1px rgba(0,0,0,.15)}
+.c6-grid{display:grid;grid-template-columns:repeat(4,88px);grid-auto-rows:88px;gap:14px;transform-style:preserve-3d}
+.c6-key{position:relative;border-radius:16px;cursor:pointer;user-select:none;transform-style:preserve-3d;transform:translateZ(7px);transition:transform .07s}
+.c6-key:active{transform:translateZ(1px)}
+.c6-key .top{position:absolute;inset:0;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:27px;color:#3a3f47;transition:background .3s,box-shadow .3s}
+.c6-key .skirt{position:absolute;inset:0;border-radius:16px;transform:translateZ(-6px);box-shadow:0 6px 9px rgba(0,0,0,.22)}
+.c6-cmd .top{background:linear-gradient(180deg,#ffffff,#eceef1);border:1px solid #d5d9de;box-shadow:inset 0 1px 0 #fff}
+.c6-cmd .skirt{background:#c7ccd2}
+.c6-agent .top{background:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.75);backdrop-filter:blur(2px)}
+.c6-agent .skirt{background:rgba(214,220,228,.85)}
+.c6-agent .sw{width:32px;height:32px;border-radius:7px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.8);transition:all .3s;display:flex;align-items:center;justify-content:center;font-size:16px;color:#9aa4b5}
+.c6-agent .sw::before{content:"✛"}
+.a-idle .top{box-shadow:inset 0 0 14px rgba(255,255,255,.6)}
+.a-thinking .top{background:rgba(124,155,245,.75);box-shadow:0 0 24px #7c9bf5,inset 0 0 18px rgba(255,255,255,.35);animation:c6pulse 1.2s infinite}
+.a-complete .top{background:rgba(126,217,162,.75);box-shadow:0 0 22px #7ed9a2,inset 0 0 18px rgba(255,255,255,.35)}
+.a-needs .top{background:rgba(255,196,86,.8);box-shadow:0 0 30px #ffb52e,inset 0 0 18px rgba(255,255,255,.35);animation:c6blink .8s infinite}
+.a-error .top{background:rgba(247,139,182,.8);box-shadow:0 0 24px #f78bb6,inset 0 0 18px rgba(255,255,255,.35);animation:c6pulse .6s infinite}
+.a-thinking .sw,.a-complete .sw,.a-needs .sw,.a-error .sw{color:rgba(255,255,255,.95);border-color:rgba(255,255,255,.6);background:rgba(255,255,255,.25)}
+@keyframes c6pulse{50%{opacity:.55}}
+@keyframes c6blink{35%{background:rgba(255,196,86,.25);box-shadow:0 0 6px #ffb52e,inset 0 0 10px rgba(255,255,255,.3)}}
+.c6-knobwrap{position:relative;transform-style:preserve-3d}
+.c6-knob{width:80px;height:80px;margin:4px;border-radius:50%;background:conic-gradient(from 200deg,#fff,#d5d8dd 25%,#f2f4f6 55%,#e0e3e8);border:1px solid #c3c7cd;cursor:pointer;position:relative;transform:translateZ(12px);transition:transform .25s;box-shadow:inset 0 2px 3px #fff}
+.c6-knob::after{content:"";position:absolute;top:5px;left:50%;width:28px;height:28px;margin-left:-14px;background:linear-gradient(180deg,#c4c8cf,#e8eaee);clip-path:polygon(0 0,100% 0,50% 100%)}
+.c6-knobside{position:absolute;top:3px;left:4px;width:80px;height:80px;border-radius:50%;background:#b6bbc2;box-shadow:0 7px 10px rgba(0,0,0,.24)}
+.c6-dialv{position:absolute;left:50%;transform:translateX(-50%);bottom:-4px;font-size:8px;letter-spacing:1px;color:#6b7280;white-space:nowrap}
+.c6-joy{margin:8px;width:72px;height:72px;border-radius:22px;border:2px dashed #9aa0a8;display:flex;align-items:center;justify-content:center;cursor:pointer;transform-style:preserve-3d}
+.c6-joy .cap{width:54px;height:54px;border-radius:50%;background:radial-gradient(circle at 38% 30%,#464a51,#101216 78%);box-shadow:0 2px 0 #000,0 8px 11px rgba(0,0,0,.35);transform:translateZ(14px);transition:translate .15s;position:relative}
+.c6-joy .cap::after{content:"◂ ▴ ▸ ▾";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:8px;letter-spacing:2px;color:#6a7280}
+.c6-mic{grid-column:span 2}
+.c6-io{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:7px;padding-left:6px}
+.c6-leds{display:flex;flex-direction:column;gap:4px}
+.c6-leds i{width:10px;height:5px;border-radius:2px;background:#fff;box-shadow:0 0 6px #fff;border:1px solid #cfd3d8}
+.c6-touch{width:36px;height:36px;border-radius:50%;background:radial-gradient(circle at 40% 32%,#33363b,#0c0e11 78%);box-shadow:0 2px 0 #000,0 5px 7px rgba(0,0,0,.3);cursor:pointer}
+.c6-mic-on .top{box-shadow:inset 0 1px 0 #fff,0 0 0 3px #f78bb6,0 0 26px #f78bb6!important}
+.c6-lcd{margin:16px 2px 4px;background:linear-gradient(180deg,#0d1015,#151a21);border-radius:12px;border:1px solid #262c36;padding:9px 16px;font-family:ui-monospace,monospace;font-size:11.5px;color:#8be9fd;box-shadow:inset 0 2px 8px rgba(0,0,0,.7),0 1px 0 rgba(255,255,255,.5);display:flex;align-items:center;gap:10px;min-height:20px}
+.c6-lcd .t{color:#4a5568;flex-shrink:0}
+.c6-lcd .m{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style>
+
+<div class="c6-stage">
+<div class="c6-rig">
+<div class="c6-jelly">
+<div class="c6-plate">
+  <div class="c6-screw tl"></div><div class="c6-screw tr"></div><div class="c6-screw bl"></div><div class="c6-screw br"></div>
+  <div class="c6-etch left">WORK LOUDER | OPENAI 2026</div>
+  <div class="c6-etch right">YOU CAN JUST BUILD THINGS</div>
+  <div class="c6-legend">
+    <span><i style="background:#fff;border:1px solid #c9ced5"></i>idle</span>
+    <span><i style="background:#7c9bf5"></i>thinking</span>
+    <span><i style="background:#7ed9a2"></i>complete</span>
+    <span><i style="background:#ffc456"></i>needs input</span>
+    <span><i style="background:#f78bb6"></i>error</span>
+  </div>
+  <div class="c6-grid">
+    <div class="c6-knobwrap"><div class="c6-knobside"></div><div class="c6-knob" id="c6Knob"></div><div class="c6-dialv" id="c6KnobV">REASONING · MED</div></div>
+    <div class="c6-key c6-agent a-idle" data-i="1"><div class="skirt"></div><div class="top"><div class="sw"></div></div></div>
+    <div class="c6-key c6-agent a-needs" data-i="2"><div class="skirt"></div><div class="top"><div class="sw"></div></div></div>
+    <div class="c6-joy" id="c6Joy"><div class="cap"></div></div>
+    <div class="c6-key c6-agent a-idle" data-i="3"><div class="skirt"></div><div class="top"><div class="sw"></div></div></div>
+    <div class="c6-key c6-agent a-idle" data-i="4"><div class="skirt"></div><div class="top"><div class="sw"></div></div></div>
+    <div class="c6-key c6-agent a-idle" data-i="5"><div class="skirt"></div><div class="top"><div class="sw"></div></div></div>
+    <div class="c6-key c6-agent a-idle" data-i="6"><div class="skirt"></div><div class="top"><div class="sw"></div></div></div>
+    <div class="c6-key c6-cmd" onclick="c6Log('⚡ Quick action — 触发聚焦 agent 的快捷操作')"><div class="skirt"></div><div class="top">⚡</div></div>
+    <div class="c6-key c6-cmd" onclick="c6Log('✓ Accept — 接受变更')"><div class="skirt"></div><div class="top">◎✓</div></div>
+    <div class="c6-key c6-cmd" onclick="c6Log('✕ Reject — 拒绝输出')"><div class="skirt"></div><div class="top">⊗</div></div>
+    <div class="c6-key c6-cmd" onclick="c6Log('⤴ Branch — 分叉新线程')"><div class="skirt"></div><div class="top">⤴</div></div>
+    <div class="c6-io"><div class="c6-leds"><i></i><i></i><i></i></div><div class="c6-touch" id="c6Touch"></div></div>
+    <div class="c6-key c6-cmd c6-mic" id="c6Mic"><div class="skirt"></div><div class="top">🎙</div></div>
+    <div class="c6-key c6-cmd" onclick="c6Log('💭 新会话 — 开一个 Codex 线程')"><div class="skirt"></div><div class="top">💭</div></div>
+  </div>
+  <div class="c6-lcd" id="c6Lcd"><span class="t">--:--:--</span><span class="m">LET'S BUILD</span></div>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+const C6=['idle','thinking','complete','needs','error'];
+const C6N={idle:'空闲',thinking:'思考中…',complete:'完成 ✓',needs:'需要你输入！',error:'出错了'};
+document.querySelectorAll('.c6-agent').forEach(k=>{
+  k.dataset.st=k.className.includes('a-needs')?3:0;
+  k.onclick=()=>{let s=(+k.dataset.st+1)%5;k.dataset.st=s;k.className='c6-key c6-agent a-'+C6[s];c6Log('Agent '+k.dataset.i+' → '+C6[s]+' · '+C6N[C6[s]])};
+});
+function c6Log(m){const d=new Date();document.getElementById('c6Lcd').innerHTML='<span class="t">'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0')+'</span><span class="m">'+m+'</span>'}
+const kn=document.getElementById('c6Knob'),lv=['LOW','MED','HIGH','XHIGH'];let li=1;
+kn.onclick=()=>{li=(li+1)%4;kn.style.transform='translateZ(12px) rotate('+(li*65-65)+'deg)';document.getElementById('c6KnobV').textContent='REASONING · '+lv[li];c6Log('旋钮 → reasoning effort '+lv[li])};
+const mic=document.getElementById('c6Mic');
+mic.onmousedown=()=>{mic.classList.add('c6-mic-on');c6Log('🎙 录音中… 松开发送语音 prompt')};
+mic.onmouseup=mic.onmouseleave=()=>{if(mic.classList.contains('c6-mic-on')){mic.classList.remove('c6-mic-on');c6Log('🎙 语音 prompt 已发给聚焦 agent')}};
+const joy=document.getElementById('c6Joy');
+joy.onclick=e=>{const r=joy.getBoundingClientRect(),x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2;
+  const dir=Math.abs(x)>Math.abs(y)?(x>0?['▸','右：下一个会话',[8,0]]:['◂','左：上一个会话',[-8,0]]):(y>0?['▾','下：滚动日志',[0,8]]:['▴','上：回到顶部',[0,-8]]);
+  const cap=joy.querySelector('.cap');cap.style.translate=dir[2][0]+'px '+dir[2][1]+'px';setTimeout(()=>cap.style.translate='',180);c6Log('摇杆 '+dir[0]+' — '+dir[1])};
+document.getElementById('c6Touch').onclick=()=>c6Log('触摸传感器 — 轻触唤醒/锁定面板');
+</script>
+
+<div class="section" style="margin-top:26px">
+<h3>v6 定稿？</h3>
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>定稿，进功能设计</h3><p>外观锁定，接下来聊怎么接真 agent、键位映射</p></div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>还要微调</h3><p>说具体哪里，我出 v7</p></div>
+  </div>
+</div>
+</div>
