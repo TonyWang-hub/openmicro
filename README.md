@@ -35,14 +35,23 @@ Codex Micro（OpenAI × Work Louder $230 限量实体宏键盘）的软件模拟
 4. **桌面布局**：左虚拟键盘 + 右真终端（xterm.js，开源），每 agent 会话一个 tab
 5. **外观**：v6 定稿
 
-## 待拍板
+## 玩具双模式（2026-07-17 定位拍板：手机 1:1 拟物玩具，Spec `docs/specs/2026-07-17-toy-demo-live-design.md`）
 
-- 接线技术方案：A pty 直连 / B tmux 托管（生态验证：amux/Tactic/agent-dashboard 均此路线，可接管已有会话、server 崩会话不死）/ C 结构化事件（Codex app-server JSON-RPC 复用 companion bridge + Claude Code Agent SDK）/ B+C 混合（推荐：tmux 主干 + hooks/notify 官方事件驱动灯效）
-- 布局高保真稿观感确认
+```bash
+# Demo 模式（零配置，6 个假 agent 演戏 + 音效震动）：手机/浏览器开
+#   http://127.0.0.1:7788/m
+# Live 模式（灯接你的真 agent）：
+#   CMS_HOST=0.0.0.0 CMS_TOKEN=你的token npm start
+#   电脑开 http://127.0.0.1:7788/pair 出二维码 → 手机扫码进
+```
+
+- 音色切换：**长按键盘上的黑色触摸圆钮**（POM 清脆轴 / POK 静音轴），localStorage 记忆
+- Live 审批注入默认：claude-code `['1']` / codex `['y','Enter']`，`CMS_KEYMAP` JSON 可覆盖——**⚠️ 未经真机校准，首次使用需对着真实权限对话实测**
+- ⚠️ 对外发布前必须改名（Tactic Remote 被要求改名的前科；"Codex Micro" 是对方产品名）
 
 ## 状态
 
-MVP 接线（B+C：tmux + 官方事件灯效）已落地。Spec：`docs/specs/2026-07-17-wiring-b-plus-c.md`。
+MVP 接线（B+C：tmux + 官方事件灯效）已落地（Spec：`docs/specs/2026-07-17-wiring-b-plus-c.md`）。玩具 Demo/Live 双模式已实现并自动化验证（93 tests + 端到端：注入 Notification → 手机键盘黄灯亮 → 按 ✓ → 键序注入真实 tmux）。待真机验收：音效/震动手感、Live keymap 校准。
 
 ## 相关
 
