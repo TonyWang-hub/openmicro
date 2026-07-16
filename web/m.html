@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <title>Micro Toy</title>
+  <link rel="manifest" href="/toy/manifest.json" />
+  <link rel="icon" href="/toy/icon.svg" type="image/svg+xml" />
+  <meta name="theme-color" content="#f7c9a5" />
+  <link rel="stylesheet" href="/toy/keyboard.css" />
+  <style>html, body { margin: 0; height: 100%; }</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module">
+    import { createToyKeyboard } from '/toy/keyboard.js';
+    import { createAudio } from '/toy/audio.js';
+    import { haptic } from '/toy/haptics.js';
+    import { createDemoDirector } from '/toy/demo-script.js';
+    import { connectLive } from '/toy/live.js';
+
+    const token = new URLSearchParams(location.search).get('token');
+    const liveMode = Boolean(token);
+
+    const profile = localStorage.getItem('toy-profile') || 'pom';
+    const audio = createAudio({ profile });
+
+    // 首次任何手势先解锁音频（spec §6 autoplay 政策）
+    addEventListener('pointerdown', () => audio.unlock(), { once: true, capture: true });
+
+    /** 焦点 slot：最近点过的 Agent 键；✓/✕ 优先作用于它 */
+    let focusedSlot = 0;
+    /** demo 引擎里各 slot 最近状态，用于 ✓/✕ 兜底找 needs_input */
+    const lastState = ['idle', 'idle', 'idle', 'idle', 'idle', 'idle'];
+
+    let director = null;
+    let live = null;
+
+    const kbd = createToyKeyboard({
+      root: document.getElementById('root'),
+      handlers: {
+        onAgentKey(slotId) {
+          audio.keyUp('agent'); haptic('tap');
+          focusedSlot = slotId;
+          if (liveMode) {
+            live?.sendCommand('focus', slotId);
+          } else {
+            director?.focus(slotId);
+          }
+        },
+        onCmd(action) {
+          audio.keyUp('cmd'); haptic('press');
+          const target = pickTarget();
+          if (liveMode) {
+            if (action === 'accept' || action === 'reject' || action === 'new_session') {
+              live?.sendCommand(action, target);
+            } else {
+              kbd.flashLcd('这颗键 Live 版二期再接', 'LIVE');
+            }
+            return;
+          }
+          if (action === 'accept') director?.approve(target);
+          else if (action === 'reject') director?.reject(target);
+          else if (action === 'quick') kbd.flashLcd('⚡ quick action：agent 假装加速了 1.7 倍');
+          else if (action === 'branch') kbd.flashLcd('⤴ 已从当前思路分叉一条新线（假装的）');
+          else if (action === 'new_session') kbd.flashLcd('💭 新会话线程已创建（demo 里它自己会开工）');
+        },
+        onPttStart() {
+          audio.pttStart(); haptic('alert');
+        },
+        onPttEnd() {
+          audio.pttStop(); haptic('press');
+          if (liveMode) kbd.flashLcd('Live 语音二期 — 先用键盘吧', 'LIVE');
+          else director?.voicePrompt(focusedSlot);
+        },
+        onKnob(level) {
+          audio.knobTick(); haptic('detent');
+          if (!liveMode) kbd.flashLcd(`思考力度 → ${level}（agent 表示压力${level === 'XHIGH' ? '山大' : '不大'}）`);
+        },
+        onJoy(dir) {
+          audio.keyUp('cmd'); haptic('tap');
+          if (dir === 'left' || dir === 'right') {
+            focusedSlot = (focusedSlot + (dir === 'right' ? 1 : 5)) % 6;
+            kbd.flashLcd(`焦点 → agent ${focusedSlot}`);
+            if (liveMode) live?.sendCommand('focus', focusedSlot);
+          } else {
+            kbd.flashLcd(dir === 'up' ? '↟ 回到顶部（象征性地）' : '↡ 滚动日志（象征性地）');
+          }
+        },
+        onTouch() {
+          audio.keyUp('touch'); haptic('tap');
+          kbd.flashLcd('触摸传感器：嘀。（长按切换音色）');
+        },
+        onTouchLongPress() {
+          const next = (localStorage.getItem('toy-profile') || 'pom') === 'pom' ? 'pok' : 'pom';
+          localStorage.setItem('toy-profile', next);
+          audio.setProfile(next);
+          audio.keyUp('cmd'); haptic('alert');
+          kbd.flashLcd(`音色 → ${next === 'pom' ? 'POM 清脆轴' : 'POK 静音轴'}`);
+        },
+      },
+    });
+
+    function pickTarget() {
+      if (lastState[focusedSlot] === 'needs_input') return focusedSlot;
+      const waiting = lastState.findIndex((s) => s === 'needs_input');
+      return waiting >= 0 ? waiting : focusedSlot;
+    }
+
+    if (liveMode) {
+      kbd.setMicDisabled(false); // 键可按，松开时提示二期
+      kbd.setLcd('LIVE · 连接中…');
+      live = connectLive({
+        token,
+        onState(slotId, state) {
+          lastState[slotId] = state;
+          kbd.applyState(slotId, state);
+          if (state === 'needs_input') { haptic('alert'); kbd.setLcd(`agent ${slotId} 需要你 — 按 ◎✓ 或 ⊗`); }
+        },
+        onLcd(text) { kbd.setLcd(text); },
+        onConnection(s) {
+          kbd.setConnection(s);
+          if (s === 'connected') kbd.setLcd('LIVE · 已连接你的真 agent');
+          if (s === 'disconnected') kbd.setLcd('断线了，重连中…（灯保持最后状态）');
+        },
+      });
+    } else {
+      kbd.setConnection('off');
+      director = createDemoDirector({
+        onState(slotId, state) {
+          lastState[slotId] = state;
+          kbd.applyState(slotId, state);
+          if (state === 'needs_input') haptic('alert');
+        },
+        onLcd(text) { kbd.setLcd(text); },
+        onFocus(slotId) { kbd.flashLcd(`焦点 → agent ${slotId}`); },
+      });
+      director.start();
+      kbd.setLcd("LET'S BUILD — demo 上电，agent 们开工了");
+    }
+  </script>
+</body>
+</html>

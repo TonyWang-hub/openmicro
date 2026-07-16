@@ -1,0 +1,13 @@
+{
+  "name": "Micro Toy — agent macropad",
+  "short_name": "MicroToy",
+  "description": "A pocket replica of a certain sold-out $230 agent macropad. Works with Claude Code too.",
+  "start_url": "/m",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e9eaee",
+  "theme_color": "#f7c9a5",
+  "icons": [
+    { "src": "/toy/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
