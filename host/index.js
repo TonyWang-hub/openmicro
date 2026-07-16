@@ -1,9 +1,12 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { loadConfig } from './config.js';
+import { createAuth, isLoopbackAddress } from './auth.js';
 import { createStore } from './state/agent-state-store.js';
 import { createIngestHandler, createAdapterMapRaw } from './ingest/http-ingest.js';
 import {
@@ -27,7 +30,52 @@ const WEB_DIR = path.join(ROOT, 'web');
 const VENDOR_ROOTS = Object.freeze({
   '/vendor/xterm': path.join(ROOT, 'node_modules', '@xterm', 'xterm'),
   '/vendor/addon-fit': path.join(ROOT, 'node_modules', '@xterm', 'addon-fit'),
+  '/vendor/qrcode': path.join(ROOT, 'node_modules', 'qrcode-generator', 'dist'),
 });
+
+/** Inline pairing-guidance page served for GET /m when auth fails (never a bare 401). */
+const PAIRING_GUIDANCE_HTML = `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>codex-micro-sim · 需要配对</title>
+  <style>
+    body {
+      font-family: ui-monospace, monospace;
+      background: #111;
+      color: #ddd;
+      padding: 2rem;
+      text-align: center;
+    }
+    h1 { font-size: 1rem; color: #fff; }
+  </style>
+</head>
+<body>
+  <h1>请从电脑上的 /pair 二维码进入</h1>
+  <p>这台手机还没有配对 token，或 token 已失效。</p>
+  <p>打开电脑浏览器访问 <code>/pair</code>，扫码或复制链接重新进入。</p>
+</body>
+</html>
+`;
+
+/**
+ * Pick a LAN-reachable IPv4 for the mobile pairing URL: the first
+ * non-internal IPv4 interface. Falls back to 127.0.0.1 (with a console
+ * hint to set CMS_HOST) when no such interface is found.
+ */
+function detectLanIp() {
+  const interfaces = os.networkInterfaces();
+  for (const entries of Object.values(interfaces)) {
+    for (const entry of entries || []) {
+      if (entry.family === 'IPv4' && !entry.internal) {
+        return entry.address;
+      }
+    }
+  }
+  console.warn('[cms] no LAN IPv4 interface found; pairing URL falls back to 127.0.0.1 (set CMS_HOST to override)');
+  return '127.0.0.1';
+}
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -148,6 +196,13 @@ function sendJson(res, status, body) {
 async function main() {
   const config = loadConfig();
   ensureWebPlaceholder();
+
+  if (!config.token) {
+    config.token = crypto.randomBytes(8).toString('hex');
+  }
+  const auth = createAuth({ token: config.token });
+  const lanIp = detectLanIp();
+  const mobileUrl = `http://${lanIp}:${config.port}/m?token=${config.token}`;
 
   let tmuxOk = false;
   let tmuxError = null;
@@ -300,12 +355,46 @@ async function main() {
       return;
     }
 
+    if (pathname === '/api/pair') {
+      const remoteAddress = req.socket?.remoteAddress;
+      if (!isLoopbackAddress(remoteAddress)) {
+        res.writeHead(404);
+        res.end('not found');
+        return;
+      }
+      sendJson(res, 200, { mobileUrl });
+      return;
+    }
+
     if (pathname === '/ingest/hook') {
       await handleIngest(req, res);
       return;
     }
 
     if (req.method === 'GET' || req.method === 'HEAD') {
+      if (pathname === '/m') {
+        if (!auth.check(req)) {
+          res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+          res.end(PAIRING_GUIDANCE_HTML);
+          return;
+        }
+        // web/m.html is produced by another agent and may not exist yet;
+        // a plain 404 from sendFile is fine per spec.
+        sendFile(path.join(WEB_DIR, 'm.html'), res);
+        return;
+      }
+
+      if (!auth.check(req)) {
+        res.writeHead(401);
+        res.end('unauthorized');
+        return;
+      }
+
+      if (pathname === '/pair') {
+        sendFile(path.join(WEB_DIR, 'pair.html'), res);
+        return;
+      }
+
       serveStatic(req, res);
       return;
     }
@@ -317,6 +406,10 @@ async function main() {
   const wss = new WebSocketServer({ noServer: true });
 
   server.on('upgrade', (req, socket, head) => {
+    if (!auth.check(req)) {
+      socket.destroy();
+      return;
+    }
     wss.handleUpgrade(req, socket, head, (ws) => {
       wss.emit('connection', ws, req);
     });
@@ -396,6 +489,11 @@ async function main() {
 
   server.listen(config.port, config.host, () => {
     console.log(`[cms] listening on http://${config.host}:${config.port} (tmux=${tmuxOk})`);
+    if (config.host === '127.0.0.1' || config.host === 'localhost') {
+      console.log(`[cms] mobile pairing (需先 CMS_HOST=0.0.0.0 重启，否则手机连不上): ${mobileUrl}`);
+    } else {
+      console.log(`[cms] mobile pairing: ${mobileUrl}`);
+    }
   });
 
   function shutdown() {

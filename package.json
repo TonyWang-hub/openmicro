@@ -7,14 +7,16 @@
     "node": ">=22"
   },
   "scripts": {
+    "postinstall": "node scripts/fix-node-pty-perms.js",
     "test": "node --test host/*.test.js host/*/*.test.js host/*/*/*.test.js",
-    "start": "node host/index.js",
-    "dev": "node --watch host/index.js"
+    "start": "node scripts/fix-node-pty-perms.js && node host/index.js",
+    "dev": "node scripts/fix-node-pty-perms.js && node --watch host/index.js"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/xterm": "^5.5.0",
     "node-pty": "^1.0.0",
+    "qrcode-generator": "^2.0.4",
     "ws": "^8.18.0"
   }
 }
