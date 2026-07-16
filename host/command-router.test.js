@@ -140,11 +140,17 @@ describe('createCommandRouter', () => {
     assert.ok(emitted.some((m) => m.type === 'error' && /6|slot/i.test(m.message)));
   });
 
-  it('focus updates focusedSlotId only (no tmux)', async () => {
-    const { router, tmuxCalls } = makeFakes();
+  it('focus updates focusedSlotId and broadcasts state (no tmux, lights unchanged)', async () => {
+    const { router, store, tmuxCalls, emitted } = makeFakes();
+    const before = store.snapshot().map((s) => s.state);
     await router.handleCommand(cmd(1, 'focus'));
     assert.equal(router.getFocusedSlotId(), 1);
     assert.equal(tmuxCalls.length, 0);
+    assert.deepEqual(store.snapshot().map((s) => s.state), before);
+    const stateMsg = emitted.find((m) => m.type === 'state');
+    assert.ok(stateMsg);
+    assert.equal(stateMsg.focusedSlotId, 1);
+    assert.deepEqual(stateMsg.slots, store.snapshot());
   });
 
   it('accept on unbound slot emits error without changing other lights', async () => {

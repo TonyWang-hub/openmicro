@@ -137,6 +137,11 @@ export function createCommandRouter({
   function handleFocus(request) {
     focusedSlotId = request.slotId;
     emit({ type: 'log', level: 'info', message: `focus → slot ${request.slotId}` });
+    emit({
+      type: 'state',
+      slots: store.snapshot(),
+      focusedSlotId,
+    });
   }
 
   /**
