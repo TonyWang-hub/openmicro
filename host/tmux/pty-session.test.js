@@ -56,11 +56,13 @@ describe('createPtySession', () => {
       onData: () => {},
       onExit: () => {},
       spawn: mock.spawn,
+      tmuxBin: 'tmux',
     });
 
-    assert.deepEqual(mock.spawnCalls, [
-      ['tmux', ['attach', '-t', 'cms-claude-0'], { name: 'xterm-256color' }],
-    ]);
+    assert.equal(mock.spawnCalls.length, 1);
+    assert.deepEqual(mock.spawnCalls[0][0], 'tmux');
+    assert.deepEqual(mock.spawnCalls[0][1], ['attach', '-t', 'cms-claude-0']);
+    assert.equal(mock.spawnCalls[0][2].name, 'xterm-256color');
   });
 
   it('write passthrough to pty', () => {
