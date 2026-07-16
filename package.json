@@ -3,13 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "node --test host/*.test.js host/*/*.test.js host/*/*/*.test.js",
     "start": "node host/index.js",
     "dev": "node --watch host/index.js"
   },
   "dependencies": {
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
     "node-pty": "^1.0.0",
     "ws": "^8.18.0"
   }

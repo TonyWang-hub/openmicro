@@ -22,10 +22,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const WEB_DIR = path.join(ROOT, 'web');
 
+/** Static vendor roots served under /vendor/* from node_modules. */
+const VENDOR_ROOTS = Object.freeze({
+  '/vendor/xterm': path.join(ROOT, 'node_modules', '@xterm', 'xterm'),
+  '/vendor/addon-fit': path.join(ROOT, 'node_modules', '@xterm', 'addon-fit'),
+});
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  '.map': 'application/json',
   '.json': 'application/json',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
@@ -72,16 +79,29 @@ function safeWebPath(urlPath) {
 }
 
 /**
- * @param {import('node:http').IncomingMessage} req
+ * Resolve a /vendor/... URL to a file under node_modules, or null.
+ * @param {string} urlPath
+ * @returns {string | null}
+ */
+function safeVendorPath(urlPath) {
+  const decoded = decodeURIComponent(urlPath.split('?')[0] || '/');
+  for (const [prefix, root] of Object.entries(VENDOR_ROOTS)) {
+    if (decoded === prefix || decoded.startsWith(`${prefix}/`)) {
+      const rel = decoded.slice(prefix.length).replace(/^\//, '');
+      if (!rel) return null;
+      const full = path.normalize(path.join(root, rel));
+      if (!full.startsWith(root)) return null;
+      return full;
+    }
+  }
+  return null;
+}
+
+/**
+ * @param {string} filePath
  * @param {import('node:http').ServerResponse} res
  */
-function serveStatic(req, res) {
-  const filePath = safeWebPath(req.url || '/');
-  if (!filePath) {
-    res.writeHead(403);
-    res.end('forbidden');
-    return;
-  }
+function sendFile(filePath, res) {
   fs.readFile(filePath, (err, data) => {
     if (err) {
       res.writeHead(err.code === 'ENOENT' ? 404 : 500);
@@ -92,6 +112,26 @@ function serveStatic(req, res) {
     res.writeHead(200, { 'content-type': MIME[ext] || 'application/octet-stream' });
     res.end(data);
   });
+}
+
+/**
+ * @param {import('node:http').IncomingMessage} req
+ * @param {import('node:http').ServerResponse} res
+ */
+function serveStatic(req, res) {
+  const url = req.url || '/';
+  const vendorPath = safeVendorPath(url);
+  if (vendorPath) {
+    sendFile(vendorPath, res);
+    return;
+  }
+  const filePath = safeWebPath(url);
+  if (!filePath) {
+    res.writeHead(403);
+    res.end('forbidden');
+    return;
+  }
+  sendFile(filePath, res);
 }
 
 /**
