@@ -14,6 +14,7 @@ import {
   TmuxNotFoundError,
 } from './tmux/client.js';
 import { createPtySession } from './tmux/pty-session.js';
+import { deletePtyIfCurrent } from './tmux/pty-map.js';
 import { createHub } from './ws/hub.js';
 import { createCommandRouter } from './command-router.js';
 import { createCodexAppServerIngest } from './adapters/codex-app-server.js';
@@ -163,6 +164,12 @@ async function main() {
   const hub = createHub();
   /** @type {Map<number, ReturnType<typeof createPtySession>>} */
   const ptys = new Map();
+  /**
+   * Defer startup reattach until first WS `subscribe` so the initial tmux
+   * redraw lands after a client is listening (pragmatic MVP; no ring buffer).
+   * @type {Map<number, string>}
+   */
+  const pendingAttach = new Map();
 
   /** @type {ReturnType<typeof createCommandRouter> | null} */
   let router = null;
@@ -172,6 +179,7 @@ async function main() {
    * @param {string} sessionKey
    */
   function attachPty(slotId, sessionKey) {
+    pendingAttach.delete(slotId);
     const prev = ptys.get(slotId);
     if (prev) {
       try { prev.dispose(); } catch { /* ignore */ }
@@ -183,7 +191,9 @@ async function main() {
         hub.broadcast({ type: 'term_output', slotId, data });
       },
       onExit: (code) => {
-        ptys.delete(slotId);
+        // Only delete if this exit belongs to the current Map entry
+        // (reattach may have replaced the session before stale onExit fires).
+        deletePtyIfCurrent(ptys, slotId, session);
         hub.broadcast({
           type: 'log',
           level: 'info',
@@ -192,6 +202,24 @@ async function main() {
       },
     });
     ptys.set(slotId, session);
+  }
+
+  function flushPendingAttaches() {
+    const entries = [...pendingAttach.entries()];
+    pendingAttach.clear();
+    for (const [slotId, sessionKey] of entries) {
+      try {
+        attachPty(slotId, sessionKey);
+        hub.broadcast({
+          type: 'log',
+          level: 'info',
+          message: `attached existing session ${sessionKey}`,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error('[cms] deferred attach failed:', message);
+      }
+    }
   }
 
   const store = createStore({
@@ -225,12 +253,8 @@ async function main() {
     if (tmuxOk) {
       try {
         if (await sessionExists(slot.sessionKey)) {
-          attachPty(slot.slotId, slot.sessionKey);
-          hub.broadcast({
-            type: 'log',
-            level: 'info',
-            message: `attached existing session ${slot.sessionKey}`,
-          });
+          // Delay attach until first WS subscribe (see flushPendingAttaches).
+          pendingAttach.set(slot.slotId, slot.sessionKey);
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -328,6 +352,9 @@ async function main() {
               slots: store.snapshot(),
               focusedSlotId: router.getFocusedSlotId(),
             });
+            // First subscribe flushes deferred reattach so initial screen
+            // redraw is not broadcast into an empty client set.
+            flushPendingAttaches();
             break;
           case 'command':
             await router.handleCommand(msg.payload);
@@ -367,8 +394,8 @@ async function main() {
   }, 1000);
   tickTimer.unref?.();
 
-  server.listen(config.port, () => {
-    console.log(`[cms] listening on http://localhost:${config.port} (tmux=${tmuxOk})`);
+  server.listen(config.port, config.host, () => {
+    console.log(`[cms] listening on http://${config.host}:${config.port} (tmux=${tmuxOk})`);
   });
 
   function shutdown() {

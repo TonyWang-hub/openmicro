@@ -3,6 +3,8 @@
  * @typedef {import('../types.js').LightState} LightState
  */
 
+import { normalizeHookFields } from './normalize-hook.js';
+
 /**
  * @typedef {object} SlotBinding
  * @property {number} slotId
@@ -12,8 +14,10 @@
 
 /**
  * @typedef {object} CodexHookRaw
- * @property {string} hookEventName
+ * @property {string} [hookEventName]
+ * @property {string} [hook_event_name]
  * @property {string} [notificationType]
+ * @property {string} [notification_type]
  */
 
 /**
@@ -87,14 +91,14 @@ function toLightEvent(binding, state, source) {
  * @returns {AgentLightEvent | null}
  */
 export function mapCodexHook(raw, binding) {
-  const { hookEventName, notificationType } = raw;
+  const { hookEventName, notificationType } = normalizeHookFields(raw);
 
   if (hookEventName === 'Notification') {
     const state = mapNotificationType(notificationType);
     return state ? toLightEvent(binding, state, 'codex-hooks') : null;
   }
 
-  const state = HOOK_STATE[hookEventName];
+  const state = hookEventName ? HOOK_STATE[hookEventName] : undefined;
   return state ? toLightEvent(binding, state, 'codex-hooks') : null;
 }
 

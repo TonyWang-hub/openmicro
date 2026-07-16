@@ -15,6 +15,10 @@
 | `CMS_HOOK_CHANNEL` | 否 | 默认 `hooks`；legacy notify 用 `notify-legacy` |
 | `CMS_PORT` | 否 | CMS Host 端口，默认 `7788` |
 
+Host 默认只监听 `127.0.0.1`（见 README / `CMS_HOST`）。
+
+官方 stdin 常用 `hook_event_name` / `notification_type`（snake_case）；适配器同时接受 camelCase。
+
 ---
 
 ## Claude Code
@@ -62,48 +66,85 @@
 }
 ```
 
-`Notification` 示例从 stdin 读取完整 JSON payload（含 `hookEventName` 与 `notificationType`）。
+`Notification` 示例从 stdin 读取完整 JSON payload（含 `hookEventName`/`hook_event_name` 与 `notificationType`/`notification_type`）。
 
 ---
 
 ## Codex（优先 hooks）
 
-推荐在 Codex 配置中使用 hooks 通道，覆盖 `SessionStart`、`PreToolUse`、`PermissionRequest`、`Stop`：
+官方格式：事件名 → **matcher 组**数组 → 每组含可选 `matcher` + 嵌套 `hooks` 数组。  
+配置通常放在 `~/.codex/hooks.json`（或项目 `.codex/hooks.json`；以当前 Codex 文档为准）。
 
 ```json
 {
   "hooks": {
     "SessionStart": [
       {
-        "type": "command",
-        "command": "CMS_HOOK_AGENT=codex CMS_SESSION_KEY=cms-codex-1 /path/to/cms-hook-forward.sh '{\"hookEventName\":\"SessionStart\"}'"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CMS_HOOK_AGENT=codex CMS_SESSION_KEY=cms-codex-1 /path/to/cms-hook-forward.sh"
+          }
+        ]
       }
     ],
     "PreToolUse": [
       {
-        "type": "command",
-        "command": "CMS_HOOK_AGENT=codex CMS_SESSION_KEY=cms-codex-1 /path/to/cms-hook-forward.sh '{\"hookEventName\":\"PreToolUse\"}'"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CMS_HOOK_AGENT=codex CMS_SESSION_KEY=cms-codex-1 /path/to/cms-hook-forward.sh"
+          }
+        ]
       }
     ],
     "PermissionRequest": [
       {
-        "type": "command",
-        "command": "CMS_HOOK_AGENT=codex CMS_SESSION_KEY=cms-codex-1 /path/to/cms-hook-forward.sh '{\"hookEventName\":\"PermissionRequest\"}'"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CMS_HOOK_AGENT=codex CMS_SESSION_KEY=cms-codex-1 /path/to/cms-hook-forward.sh"
+          }
+        ]
       }
     ],
     "Stop": [
       {
-        "type": "command",
-        "command": "CMS_HOOK_AGENT=codex CMS_SESSION_KEY=cms-codex-1 /path/to/cms-hook-forward.sh '{\"hookEventName\":\"Stop\"}'"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CMS_HOOK_AGENT=codex CMS_SESSION_KEY=cms-codex-1 /path/to/cms-hook-forward.sh"
+          }
+        ]
       }
     ]
   }
 }
 ```
 
-### Legacy `notify` 兼容
+官方会在 stdin 写入含 `hook_event_name` 的 JSON；转发脚本把 stdin（或 argv）原样 POST 到 Host，无需在 command 里硬编码事件名。
 
-若环境仍使用旧版 notify，设置 `CMS_HOOK_CHANNEL=notify-legacy`：
+---
+
+## Legacy `notify` 兼容（已弃用）
+
+若环境仍使用旧版 `notify`（仅常见 `agent-turn-complete`），在**用户级** `~/.codex/config.toml` 配置（项目级 `.codex/config.toml` 会忽略 `notify`）：
+
+```toml
+# Deprecated — prefer lifecycle hooks above. Still works for complete→idle only.
+notify = [
+  "env",
+  "CMS_HOOK_AGENT=codex",
+  "CMS_HOOK_CHANNEL=notify-legacy",
+  "CMS_SESSION_KEY=cms-codex-1",
+  "/path/to/cms-hook-forward.sh",
+]
+```
+
+Codex 会把 JSON payload 作为**最后一个 argv** 传给命令（例如 `{"type":"agent-turn-complete",...}`）。  
+也可包一层小脚本读 `$1` 再调 forward；手动探测：
 
 ```bash
 CMS_HOOK_AGENT=codex \
@@ -134,7 +175,7 @@ Host 运行后，手动探测：
 ```bash
 curl -sS -X POST "http://127.0.0.1:7788/ingest/hook" \
   -H 'content-type: application/json' \
-  -d '{"agent":"claude-code","channel":"hooks","sessionKey":"cms-claude-0","payload":{"hookEventName":"PreToolUse"}}'
+  -d '{"agent":"claude-code","channel":"hooks","sessionKey":"cms-claude-0","payload":{"hook_event_name":"PreToolUse"}}'
 ```
 
 期望响应：`{"ok":true}`

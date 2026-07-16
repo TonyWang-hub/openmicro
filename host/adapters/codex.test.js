@@ -32,6 +32,20 @@ describe('mapCodexHook', () => {
   it('returns null for unknown hook events', () => {
     assert.equal(mapCodexHook({ hookEventName: 'Unknown' }, b), null);
   });
+
+  it('accepts official snake_case stdin (hook_event_name)', () => {
+    const e = mapCodexHook({ hook_event_name: 'PermissionRequest' }, b);
+    assert.equal(e.state, 'needs_input');
+    assert.equal(e.source, 'codex-hooks');
+  });
+
+  it('accepts snake_case Notification + notification_type', () => {
+    const e = mapCodexHook({
+      hook_event_name: 'Notification',
+      notification_type: 'permission_prompt',
+    }, b);
+    assert.equal(e.state, 'needs_input');
+  });
 });
 
 describe('mapCodexLegacyNotify', () => {

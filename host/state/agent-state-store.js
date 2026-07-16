@@ -21,14 +21,25 @@
  * @property {number} ingestStaleMs
  * @property {() => number} [now]
  * @property {(snap: ReturnType<ReturnType<typeof createStore>['snapshot']>) => void} [onChange]
+ * @property {(fn: () => void, ms: number) => unknown} [schedule]
+ * @property {(id: unknown) => void} [clearSchedule]
  */
 
 /**
  * @param {StoreOptions} options
  */
-export function createStore({ completeHoldMs, ingestStaleMs, now = () => Date.now(), onChange }) {
+export function createStore({
+  completeHoldMs,
+  ingestStaleMs,
+  now = () => Date.now(),
+  onChange,
+  schedule = setTimeout,
+  clearSchedule = clearTimeout,
+}) {
   /** @type {Map<number, SlotRecord>} */
   const slots = new Map();
+  /** @type {Map<number, unknown>} */
+  const completeTimers = new Map();
 
   function emitChange() {
     onChange?.(snapshot());
@@ -45,6 +56,36 @@ export function createStore({ completeHoldMs, ingestStaleMs, now = () => Date.no
         meta,
         lastEventAt,
       }));
+  }
+
+  /**
+   * @param {number} slotId
+   */
+  function clearCompleteTimer(slotId) {
+    const handle = completeTimers.get(slotId);
+    if (handle != null) {
+      clearSchedule(handle);
+      completeTimers.delete(slotId);
+    }
+  }
+
+  /**
+   * Precise complete→idle transition; 1s tick remains for stale heartbeat only.
+   * @param {number} slotId
+   * @param {number} completeUntil
+   */
+  function scheduleCompleteHold(slotId, completeUntil) {
+    clearCompleteTimer(slotId);
+    const delay = Math.max(0, completeUntil - now());
+    const handle = schedule(() => {
+      completeTimers.delete(slotId);
+      tick();
+    }, delay);
+    // Avoid keeping the event loop alive in tests / idle Host.
+    if (handle && typeof handle === 'object' && typeof handle.unref === 'function') {
+      handle.unref();
+    }
+    completeTimers.set(slotId, handle);
   }
 
   function bindSlot({ slotId, agent, sessionKey }) {
@@ -80,8 +121,10 @@ export function createStore({ completeHoldMs, ingestStaleMs, now = () => Date.no
 
     if (event.state === 'complete') {
       slot.completeUntil = eventTime + completeHoldMs;
+      scheduleCompleteHold(event.slotId, slot.completeUntil);
     } else {
       delete slot.completeUntil;
+      clearCompleteTimer(event.slotId);
     }
 
     emitChange();
@@ -99,6 +142,7 @@ export function createStore({ completeHoldMs, ingestStaleMs, now = () => Date.no
         slot.state = 'idle';
         slot.meta = 'bound';
         delete slot.completeUntil;
+        clearCompleteTimer(slot.slotId);
         changed = true;
         continue;
       }
@@ -108,6 +152,7 @@ export function createStore({ completeHoldMs, ingestStaleMs, now = () => Date.no
           slot.state = 'unknown';
           slot.meta = 'detached';
           delete slot.completeUntil;
+          clearCompleteTimer(slot.slotId);
           changed = true;
         }
       }

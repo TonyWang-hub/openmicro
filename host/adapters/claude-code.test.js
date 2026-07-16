@@ -77,4 +77,18 @@ describe('mapClaudeHook', () => {
       null,
     );
   });
+
+  it('accepts official snake_case stdin (hook_event_name)', () => {
+    const e = mapClaudeHook({ hook_event_name: 'PreToolUse' }, b);
+    assert.equal(e.state, 'thinking');
+    assert.equal(e.source, 'cc-hooks');
+  });
+
+  it('accepts snake_case Notification + notification_type', () => {
+    const e = mapClaudeHook({
+      hook_event_name: 'Notification',
+      notification_type: 'agent_needs_input',
+    }, b);
+    assert.equal(e.state, 'needs_input');
+  });
 });

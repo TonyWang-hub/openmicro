@@ -3,6 +3,8 @@ import os from 'node:os';
 
 export function loadConfig(env = process.env) {
   return {
+    /** Bind address; default loopback-only. Override with CMS_HOST (e.g. 0.0.0.0). */
+    host: env.CMS_HOST || '127.0.0.1',
     port: Number(env.CMS_PORT || 7788),
     completeHoldMs: Number(env.CMS_COMPLETE_HOLD_MS || 2000),
     ingestStaleMs: Number(env.CMS_INGEST_STALE_MS || 30_000),
