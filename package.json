@@ -1,0 +1,16 @@
+{
+  "name": "codex-micro-sim",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test host/**/*.test.js",
+    "start": "node host/index.js",
+    "dev": "node --watch host/index.js"
+  },
+  "dependencies": {
+    "node-pty": "^1.0.0",
+    "ws": "^8.18.0"
+  }
+}

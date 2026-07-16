@@ -48,3 +48,7 @@ Codex Micro（OpenAI × Work Louder $230 限量实体宏键盘）的软件模拟
 
 - 知识库调研：my-project `internal-research`（开源同类：amux / CloudCLI UI / agent-dashboard / Tactic Remote）
 - 同源项目：my-project `notes/internal-project/`（mvp/bridge 已实现 codex app-server 事件流 + codex exec 兜底，本项目候选复用件）
+
+## 启动
+
+`npm start`（host 入口待后续任务实现）
