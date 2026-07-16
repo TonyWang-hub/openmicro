@@ -20,9 +20,29 @@ Codex Micro（OpenAI × Work Louder $230 限量实体宏键盘）的软件模拟
 | 摇杆 | 切会话 / 滚日志 |
 | 触摸传感器 | 唤醒/锁定面板 |
 
+## 设计稿（docs/design/，浏览器直开；底部选项按钮依赖外层 frame 不可用，其余交互完整）
+
+| 文件 | 内容 | 状态 |
+|---|---|---|
+| `simulator-v6-mockup.html` | 键盘本体外观定稿（v1-v6 迭代：深色赛博→照真机重做→3D→轻立体→整键发光+图例/日志屏入机身） | ✅ 定稿 |
+| `layout-v2-hifi-mockup.html` | 桌面应用布局高保真：左 v6 键盘 + 右终端面板（tab 圆点=Agent 键灯色联动、审批卡、状态栏） | 待用户确认 |
+
+## 已拍板的决策
+
+1. **用途**：真接 agent 日常用（非玩具/演示）
+2. **目标 agent**：Claude Code + Codex 双支持一步到位（适配器抽象层）
+3. **形态**：Web 为主 + 桌面轻壳（置顶/全局键）；手机 = 同一 Web 页自适应（PWA，键盘在上/终端抽屉在下）
+4. **桌面布局**：左虚拟键盘 + 右真终端（xterm.js，开源），每 agent 会话一个 tab
+5. **外观**：v6 定稿
+
+## 待拍板
+
+- 接线技术方案：A pty 直连 / B tmux 托管（生态验证：amux/Tactic/agent-dashboard 均此路线，可接管已有会话、server 崩会话不死）/ C 结构化事件（Codex app-server JSON-RPC 复用 companion bridge + Claude Code Agent SDK）/ B+C 混合（推荐：tmux 主干 + hooks/notify 官方事件驱动灯效）
+- 布局高保真稿观感确认
+
 ## 状态
 
-设计阶段（brainstorming 进行中）。技术方案、agent 接线方式（Codex CLI / Claude Code）、进程形态等待 spec 定稿后落 `docs/specs/`。
+设计阶段（brainstorming 进行中）。spec 定稿后落 `docs/specs/`。
 
 ## 相关
 

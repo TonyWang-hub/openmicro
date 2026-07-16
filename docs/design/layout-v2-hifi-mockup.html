@@ -1,0 +1,179 @@
+<h2>桌面布局 · 高保真版</h2>
+<p class="subtitle">v6 定稿键盘原样入场 + 精致终端面板。键盘可点（Agent 键切状态会同步 tab 圆点和日志屏），终端是样式演示。</p>
+
+<style>
+/* ===== 桌面窗口 ===== */
+.hf-win{max-width:1180px;margin:0 auto;border-radius:16px;overflow:hidden;border:1px solid #d0d4da;box-shadow:0 24px 70px rgba(0,0,0,.18);background:#101318}
+.hf-titlebar{background:linear-gradient(180deg,#f2f3f5,#e6e8ec);padding:9px 14px;font-size:12px;color:#6b7280;display:flex;gap:7px;align-items:center;border-bottom:1px solid #d5d9de}
+.hf-titlebar i{width:11px;height:11px;border-radius:50%;display:inline-block}
+.hf-titlebar .name{margin-left:8px;font-weight:600;color:#4a5568}
+.hf-body{display:flex;min-height:520px}
+.hf-left{width:47%;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 26%,#fbfbfc,#e9eaee 75%);position:relative}
+.hf-right{flex:1;background:#0d1117;display:flex;flex-direction:column;border-left:1px solid #1f242c}
+/* ===== v6 键盘（缩放 0.74 放入面板）===== */
+.hf-kbdwrap{transform:scale(.74);transform-origin:center center}
+.c6-jelly{background:linear-gradient(150deg,#fcd9b8e6,#f7c9a5e6 45%,#fbe3cde6);border-radius:46px;padding:27px;box-shadow:0 4px 0 #edb287bb,0 14px 34px rgba(216,140,80,.38),0 30px 60px rgba(216,140,80,.22);position:relative}
+.c6-plate{background:linear-gradient(160deg,#f0f2f4,#dcdfe4);border-radius:28px;padding:16px 42px 20px;position:relative;box-shadow:inset 0 2px 3px #fff,inset 0 -3px 8px rgba(0,0,0,.09),0 3px 0 #c3c8ce,0 8px 14px rgba(0,0,0,.12)}
+.c6-screw{position:absolute;width:15px;height:15px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#4a4d52,#17191d);box-shadow:inset 0 1px 2px rgba(255,255,255,.3)}
+.c6-screw::after{content:"";position:absolute;inset:4px;border-radius:2px;background:#0a0b0d;clip-path:polygon(0 40%,100% 40%,100% 60%,0 60%)}
+.c6-screw.tl{top:13px;left:13px}.c6-screw.tr{top:13px;right:13px}.c6-screw.bl{bottom:13px;left:13px}.c6-screw.br{bottom:13px;right:13px}
+.c6-etch{position:absolute;font-size:9px;letter-spacing:1.5px;color:#99a0a9}
+.c6-etch.left{left:15px;top:50%;writing-mode:vertical-rl;transform:rotate(180deg);translate:0 -50%}
+.c6-etch.right{right:15px;top:50%;writing-mode:vertical-rl;translate:0 -50%}
+.c6-legend{display:flex;justify-content:center;gap:14px;padding:6px 0 12px;font-size:9px;letter-spacing:1px;color:#8a919b;text-transform:uppercase}
+.c6-legend span{display:flex;align-items:center;gap:5px}
+.c6-legend i{width:9px;height:9px;border-radius:50%;display:inline-block;box-shadow:inset 0 1px 1px rgba(0,0,0,.15)}
+.c6-grid{display:grid;grid-template-columns:repeat(4,88px);grid-auto-rows:88px;gap:14px}
+.c6-key{position:relative;border-radius:16px;cursor:pointer;user-select:none;transition:transform .07s}
+.c6-key:active{transform:translateY(3px)}
+.c6-key .top{position:absolute;inset:0;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:27px;color:#3a3f47;transition:background .3s,box-shadow .3s;box-shadow:0 6px 0 #c7ccd2,0 9px 11px rgba(0,0,0,.2)}
+.c6-key:active .top{box-shadow:0 2px 0 #c7ccd2,0 3px 5px rgba(0,0,0,.2)}
+.c6-cmd .top{background:linear-gradient(180deg,#ffffff,#eceef1);border:1px solid #d5d9de}
+.c6-agent .top{background:rgba(255,255,255,.4);border:1px solid rgba(255,255,255,.75);box-shadow:0 6px 0 rgba(196,203,212,.9),0 9px 11px rgba(0,0,0,.18)}
+.c6-agent .sw{width:32px;height:32px;border-radius:7px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.8);transition:all .3s;display:flex;align-items:center;justify-content:center;font-size:16px;color:#9aa4b5}
+.c6-agent .sw::before{content:"✛"}
+.a-idle .top{box-shadow:0 6px 0 rgba(196,203,212,.9),0 9px 11px rgba(0,0,0,.18),inset 0 0 14px rgba(255,255,255,.6)}
+.a-thinking .top{background:rgba(124,155,245,.75);box-shadow:0 6px 0 rgba(196,203,212,.9),0 0 24px #7c9bf5,inset 0 0 18px rgba(255,255,255,.35);animation:c6pulse 1.2s infinite}
+.a-complete .top{background:rgba(126,217,162,.75);box-shadow:0 6px 0 rgba(196,203,212,.9),0 0 22px #7ed9a2,inset 0 0 18px rgba(255,255,255,.35)}
+.a-needs .top{background:rgba(255,196,86,.8);box-shadow:0 6px 0 rgba(196,203,212,.9),0 0 30px #ffb52e,inset 0 0 18px rgba(255,255,255,.35);animation:c6blink .8s infinite}
+.a-error .top{background:rgba(247,139,182,.8);box-shadow:0 6px 0 rgba(196,203,212,.9),0 0 24px #f78bb6,inset 0 0 18px rgba(255,255,255,.35);animation:c6pulse .6s infinite}
+.a-thinking .sw,.a-complete .sw,.a-needs .sw,.a-error .sw{color:rgba(255,255,255,.95);border-color:rgba(255,255,255,.6);background:rgba(255,255,255,.25)}
+@keyframes c6pulse{50%{opacity:.55}}
+@keyframes c6blink{35%{background:rgba(255,196,86,.25);box-shadow:0 6px 0 rgba(196,203,212,.9),0 0 6px #ffb52e,inset 0 0 10px rgba(255,255,255,.3)}}
+.c6-knobwrap{position:relative}
+.c6-knob{width:80px;height:80px;margin:4px;border-radius:50%;background:conic-gradient(from 200deg,#fff,#d5d8dd 25%,#f2f4f6 55%,#e0e3e8);border:1px solid #c3c7cd;cursor:pointer;position:relative;transition:transform .25s;box-shadow:inset 0 2px 3px #fff,0 7px 10px rgba(0,0,0,.24)}
+.c6-knob::after{content:"";position:absolute;top:5px;left:50%;width:28px;height:28px;margin-left:-14px;background:linear-gradient(180deg,#c4c8cf,#e8eaee);clip-path:polygon(0 0,100% 0,50% 100%)}
+.c6-dialv{position:absolute;left:50%;transform:translateX(-50%);bottom:-4px;font-size:8px;letter-spacing:1px;color:#6b7280;white-space:nowrap}
+.c6-joy{margin:8px;width:72px;height:72px;border-radius:22px;border:2px dashed #9aa0a8;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.c6-joy .cap{width:54px;height:54px;border-radius:50%;background:radial-gradient(circle at 38% 30%,#464a51,#101216 78%);box-shadow:0 2px 0 #000,0 8px 11px rgba(0,0,0,.35);transition:translate .15s;position:relative}
+.c6-joy .cap::after{content:"◂ ▴ ▸ ▾";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:8px;letter-spacing:2px;color:#6a7280}
+.c6-mic{grid-column:span 2}
+.c6-io{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:7px;padding-left:6px}
+.c6-leds{display:flex;flex-direction:column;gap:4px}
+.c6-leds i{width:10px;height:5px;border-radius:2px;background:#fff;box-shadow:0 0 6px #fff;border:1px solid #cfd3d8}
+.c6-touch{width:36px;height:36px;border-radius:50%;background:radial-gradient(circle at 40% 32%,#33363b,#0c0e11 78%);box-shadow:0 2px 0 #000,0 5px 7px rgba(0,0,0,.3);cursor:pointer}
+.c6-mic-on .top{box-shadow:0 6px 0 #c7ccd2,0 0 0 3px #f78bb6,0 0 26px #f78bb6!important}
+.c6-lcd{margin:16px 2px 4px;background:linear-gradient(180deg,#0d1015,#151a21);border-radius:12px;border:1px solid #262c36;padding:9px 16px;font-family:ui-monospace,monospace;font-size:11.5px;color:#8be9fd;box-shadow:inset 0 2px 8px rgba(0,0,0,.7),0 1px 0 rgba(255,255,255,.5);display:flex;align-items:center;gap:10px;min-height:20px}
+.c6-lcd .t{color:#4a5568;flex-shrink:0}
+.c6-lcd .m{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* ===== 终端面板 ===== */
+.hf-tabs{display:flex;gap:2px;padding:10px 12px 0;background:#161b22;border-bottom:1px solid #1f242c}
+.hf-tab{padding:8px 16px 9px;font-size:12px;color:#8b949e;border-radius:8px 8px 0 0;cursor:pointer;display:flex;align-items:center;gap:7px;font-family:ui-monospace,monospace}
+.hf-tab .dot{width:8px;height:8px;border-radius:50%;transition:all .3s}
+.hf-tab.act{background:#0d1117;color:#e6edf3;border:1px solid #1f242c;border-bottom:1px solid #0d1117;margin-bottom:-1px}
+.hf-tab:hover:not(.act){color:#c9d1d9}
+.hf-tab .add{color:#484f58}
+.hf-term{flex:1;padding:16px 18px;font-family:ui-monospace,monospace;font-size:12.5px;line-height:1.75;color:#c9d1d9;overflow:hidden}
+.hf-term .p{color:#7ee787}.hf-term .c{color:#8b949e}.hf-term .y{color:#f2cc60}.hf-term .b{color:#79c0ff}.hf-term .m{color:#d2a8ff}
+.hf-term .diff-a{color:#7ee787;background:rgba(46,160,67,.15);display:block;padding:0 6px;border-radius:3px}
+.hf-term .diff-d{color:#ffa198;background:rgba(248,81,73,.12);display:block;padding:0 6px;border-radius:3px}
+.hf-approve{margin:10px 0;border:1px solid #3d2f10;background:linear-gradient(180deg,#221a06,#1c1503);border-radius:10px;padding:10px 14px}
+.hf-approve .ttl{color:#f2cc60;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.hf-approve .ttl::before{content:"";width:8px;height:8px;border-radius:50%;background:#ffc456;box-shadow:0 0 8px #ffb52e;animation:c6blink .8s infinite}
+.hf-approve .hint{color:#8b949e;font-size:11px}
+.hf-approve .hint b{color:#e6edf3}
+.hf-cursor{display:inline-block;width:8px;height:15px;background:#c9d1d9;vertical-align:-2px;animation:hfblink 1s steps(1) infinite}
+@keyframes hfblink{50%{opacity:0}}
+.hf-status{background:#161b22;border-top:1px solid #1f242c;padding:7px 14px;font-size:11px;color:#8b949e;font-family:ui-monospace,monospace;display:flex;gap:18px}
+.hf-status b{color:#c9d1d9;font-weight:500}
+</style>
+
+<div class="hf-win">
+  <div class="hf-titlebar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span class="name">Codex Micro Sim</span><span style="margin-left:auto;font-size:10px;color:#9aa0a8">⌘K 命令板 · 置顶 ●</span></div>
+  <div class="hf-body">
+    <div class="hf-left">
+      <div class="hf-kbdwrap">
+        <div class="c6-jelly">
+        <div class="c6-plate">
+          <div class="c6-screw tl"></div><div class="c6-screw tr"></div><div class="c6-screw bl"></div><div class="c6-screw br"></div>
+          <div class="c6-etch left">WORK LOUDER | OPENAI 2026</div>
+          <div class="c6-etch right">YOU CAN JUST BUILD THINGS</div>
+          <div class="c6-legend">
+            <span><i style="background:#fff;border:1px solid #c9ced5"></i>idle</span>
+            <span><i style="background:#7c9bf5"></i>thinking</span>
+            <span><i style="background:#7ed9a2"></i>complete</span>
+            <span><i style="background:#ffc456"></i>needs input</span>
+            <span><i style="background:#f78bb6"></i>error</span>
+          </div>
+          <div class="c6-grid">
+            <div class="c6-knobwrap"><div class="c6-knob" id="hfKnob"></div><div class="c6-dialv" id="hfKnobV">REASONING · MED</div></div>
+            <div class="c6-key c6-agent a-thinking" data-i="1"><div class="top"><div class="sw"></div></div></div>
+            <div class="c6-key c6-agent a-needs" data-i="2"><div class="top"><div class="sw"></div></div></div>
+            <div class="c6-joy" id="hfJoy"><div class="cap"></div></div>
+            <div class="c6-key c6-agent a-complete" data-i="3"><div class="top"><div class="sw"></div></div></div>
+            <div class="c6-key c6-agent a-idle" data-i="4"><div class="top"><div class="sw"></div></div></div>
+            <div class="c6-key c6-agent a-idle" data-i="5"><div class="top"><div class="sw"></div></div></div>
+            <div class="c6-key c6-agent a-idle" data-i="6"><div class="top"><div class="sw"></div></div></div>
+            <div class="c6-key c6-cmd" onclick="hfLog('⚡ Quick action')"><div class="top">⚡</div></div>
+            <div class="c6-key c6-cmd" onclick="hfLog('✓ Accept — 已接受 price.ts 写入')"><div class="top">◎✓</div></div>
+            <div class="c6-key c6-cmd" onclick="hfLog('✕ Reject — 已拒绝')"><div class="top">⊗</div></div>
+            <div class="c6-key c6-cmd" onclick="hfLog('⤴ Branch — 分叉新线程')"><div class="top">⤴</div></div>
+            <div class="c6-io"><div class="c6-leds"><i></i><i></i><i></i></div><div class="c6-touch"></div></div>
+            <div class="c6-key c6-cmd c6-mic" id="hfMic"><div class="top">🎙</div></div>
+            <div class="c6-key c6-cmd" onclick="hfLog('💭 新会话')"><div class="top">💭</div></div>
+          </div>
+          <div class="c6-lcd" id="hfLcd"><span class="t">--:--:--</span><span class="m">agent 2 · needs input · 等你审批 price.ts</span></div>
+        </div>
+        </div>
+      </div>
+    </div>
+    <div class="hf-right">
+      <div class="hf-tabs" id="hfTabs">
+        <div class="hf-tab" data-t="1"><span class="dot" style="background:#7c9bf5;box-shadow:0 0 6px #7c9bf5"></span>claude · my-project</div>
+        <div class="hf-tab act" data-t="2"><span class="dot" style="background:#ffc456;box-shadow:0 0 6px #ffb52e"></span>codex · banana-mall</div>
+        <div class="hf-tab" data-t="3"><span class="dot" style="background:#7ed9a2"></span>claude · micro-sim</div>
+        <div class="hf-tab"><span class="add">＋</span></div>
+      </div>
+      <div class="hf-term">
+        <div><span class="p">▌ codex</span> <span class="c">· gpt-5.5 · ~/work/banana-mall</span></div>
+        <div class="c">✓ 读取 src/checkout/price.ts</div>
+        <div class="c">✓ 定位 3 处硬编码汇率</div>
+        <div style="margin:6px 0">
+          <span class="diff-d">-  const rate = 7.2;</span>
+          <span class="diff-a">+  const rate = await fx.getRate('USD/CNY');</span>
+        </div>
+        <div class="hf-approve">
+          <div class="ttl">需要审批 · 写入 src/checkout/price.ts</div>
+          <div class="hint">键盘 <b>◎✓</b> 接受 · <b>⊗</b> 拒绝 · <b>🎙 按住</b>说修改意见 · 或直接在下面输入</div>
+        </div>
+        <div><span class="p">❯</span> <span class="hf-cursor"></span></div>
+      </div>
+      <div class="hf-status"><span>tmux <b>3 sessions</b></span><span>hooks <b>已接</b></span><span>notify <b>已接</b></span><span style="margin-left:auto">手机扫码接管 ▦</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const HF=['idle','thinking','complete','needs','error'];
+const HFN={idle:'空闲',thinking:'思考中…',complete:'完成 ✓',needs:'需要你输入！',error:'出错了'};
+const HFC={idle:'#e8eaee',thinking:'#7c9bf5',complete:'#7ed9a2',needs:'#ffc456',error:'#f78bb6'};
+document.querySelectorAll('.c6-agent').forEach(k=>{
+  k.dataset.st=k.className.includes('a-needs')?3:k.className.includes('a-thinking')?1:k.className.includes('a-complete')?2:0;
+  k.onclick=()=>{let s=(+k.dataset.st+1)%5;k.dataset.st=s;k.className='c6-key c6-agent a-'+HF[s];hfLog('Agent '+k.dataset.i+' → '+HF[s]+' · '+HFN[HF[s]]);
+    const tab=document.querySelector('.hf-tab[data-t="'+k.dataset.i+'"] .dot');if(tab){tab.style.background=HFC[HF[s]];tab.style.boxShadow=s?'0 0 6px '+HFC[HF[s]]:'none'}};
+});
+function hfLog(m){const d=new Date();document.getElementById('hfLcd').innerHTML='<span class="t">'+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0')+'</span><span class="m">'+m+'</span>'}
+const kn=document.getElementById('hfKnob'),lv=['LOW','MED','HIGH','XHIGH'];let li=1;
+kn.onclick=()=>{li=(li+1)%4;kn.style.transform='rotate('+(li*65-65)+'deg)';document.getElementById('hfKnobV').textContent='REASONING · '+lv[li];hfLog('旋钮 → reasoning '+lv[li])};
+const mic=document.getElementById('hfMic');
+mic.onmousedown=()=>{mic.classList.add('c6-mic-on');hfLog('🎙 录音中…')};
+mic.onmouseup=mic.onmouseleave=()=>{if(mic.classList.contains('c6-mic-on')){mic.classList.remove('c6-mic-on');hfLog('🎙 语音已发给 Agent 2')}};
+const joy=document.getElementById('hfJoy');
+joy.onclick=e=>{const r=joy.getBoundingClientRect(),x=e.clientX-r.left-r.width/2;const cap=joy.querySelector('.cap');
+  cap.style.translate=(x>0?8:-8)+'px 0';setTimeout(()=>cap.style.translate='',180);hfLog('摇杆 — 切换会话')};
+document.querySelectorAll('.hf-tab[data-t]').forEach(t=>t.onclick=()=>{document.querySelectorAll('.hf-tab').forEach(x=>x.classList.remove('act'));t.classList.add('act')});
+</script>
+
+<div class="section" style="margin-top:26px">
+<h3>这版观感如何？</h3>
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>好看，布局+观感都定了</h3><p>回终端拍板技术方案（A pty / B tmux / C 结构化 / B+C 混合）</p></div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>还差点，继续调</h3><p>说哪里不好看（左右比例/深浅色/终端样式/键盘大小）</p></div>
+  </div>
+</div>
+</div>
