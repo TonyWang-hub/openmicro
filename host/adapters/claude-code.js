@@ -36,16 +36,13 @@ const HOOK_STATE = {
  * @returns {LightState | null}
  */
 function mapNotificationType(notificationType) {
-  if (!notificationType) return null;
-  if (
-    notificationType === 'permission_prompt'
-    || notificationType === 'agent_needs_input'
-    || notificationType.startsWith('elicitation_')
-  ) {
-    return 'needs_input';
-  }
+  // A Notification hook fires exactly when Claude wants the user's attention
+  // (permission request / idle prompt / elicitation). Real-world payload field
+  // values vary by CLI version, so default to needs_input for anything that
+  // is not an explicit completion — a dropped notification means the yellow
+  // light never turns on, which is the worst failure mode for this device.
   if (notificationType === 'agent_completed') return 'complete';
-  return null;
+  return 'needs_input';
 }
 
 /**

@@ -71,10 +71,15 @@ describe('mapClaudeHook', () => {
     assert.equal(mapClaudeHook({ hookEventName: 'PostToolUse' }, b), null);
   });
 
-  it('returns null for unknown Notification types', () => {
+  it('maps unknown Notification types to needs_input (a Notification means Claude wants attention; dropping it kills the yellow light)', () => {
     assert.equal(
-      mapClaudeHook({ hookEventName: 'Notification', notificationType: 'info' }, b),
-      null,
+      mapClaudeHook({ hookEventName: 'Notification', notificationType: 'info' }, b).state,
+      'needs_input',
+    );
+    // Notification with no type field at all (older CLI payloads) — same default.
+    assert.equal(
+      mapClaudeHook({ hookEventName: 'Notification' }, b).state,
+      'needs_input',
     );
   });
 

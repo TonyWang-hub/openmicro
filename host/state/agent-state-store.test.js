@@ -119,4 +119,22 @@ describe('AgentStateStore', () => {
     store.tick(now);
     assert.equal(store.snapshot()[0].state, 'idle');
   });
+
+  it('needs_input survives the stale sweep (agent waiting for approval emits no events)', () => {
+    let now = 0;
+    const store = createStore({
+      ingestStaleMs: 30_000,
+      now: () => now,
+      schedule: () => null,
+      clearSchedule: () => {},
+    });
+    store.bindSlot({ slotId: 0, agent: 'claude-code', sessionKey: 's' });
+    store.applyEvent({
+      v: 1, slotId: 0, agent: 'claude-code', sessionKey: 's',
+      state: 'needs_input', ts: new Date(now).toISOString(), source: 'cc-hooks',
+    });
+    now += 300_000; // five silent minutes at the permission prompt
+    store.tick(now);
+    assert.equal(store.snapshot()[0].state, 'needs_input');
+  });
 });

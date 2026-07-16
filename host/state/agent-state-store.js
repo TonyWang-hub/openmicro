@@ -147,7 +147,10 @@ export function createStore({
         continue;
       }
 
-      if (slot.state !== 'idle' && slot.state !== 'unknown') {
+      // needs_input is exempt from the stale sweep: an agent waiting for
+      // approval emits no further events, possibly for minutes — the yellow
+      // light must hold until a real event (approve/reject/next turn) moves it.
+      if (slot.state !== 'idle' && slot.state !== 'unknown' && slot.state !== 'needs_input') {
         if (tickNow - slot.lastEventAt >= ingestStaleMs) {
           slot.state = 'unknown';
           slot.meta = 'detached';
