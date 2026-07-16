@@ -5,7 +5,7 @@
   "type": "module",
   "engines": { "node": ">=22" },
   "scripts": {
-    "test": "node --test host/**/*.test.js",
+    "test": "node --test host/*.test.js host/*/*.test.js host/*/*/*.test.js",
     "start": "node host/index.js",
     "dev": "node --watch host/index.js"
   },

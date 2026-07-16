@@ -13,6 +13,10 @@ export function loadConfig(env = process.env) {
       'claude-code': { accept: ['y', 'Enter'], reject: ['n', 'Enter'] },
       codex: { accept: ['y', 'Enter'], reject: ['n', 'Enter'] },
     },
+    commands: {
+      'claude-code': env.CMS_CMD_CLAUDE || 'claude',
+      codex: env.CMS_CMD_CODEX || 'codex',
+    },
     slots: [
       { slotId: 0, agent: 'claude-code', sessionKey: 'cms-claude-0' },
       { slotId: 1, agent: 'codex', sessionKey: 'cms-codex-1' },
