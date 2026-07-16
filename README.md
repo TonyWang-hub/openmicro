@@ -42,7 +42,7 @@ Codex Micro（OpenAI × Work Louder $230 限量实体宏键盘）的软件模拟
 
 ## 状态
 
-设计阶段（brainstorming 进行中）。spec 定稿后落 `docs/specs/`。
+MVP 接线（B+C：tmux + 官方事件灯效）已落地。Spec：`docs/specs/2026-07-17-wiring-b-plus-c.md`。
 
 ## 相关
 
@@ -51,4 +51,23 @@ Codex Micro（OpenAI × Work Louder $230 限量实体宏键盘）的软件模拟
 
 ## 启动
 
-`npm start`（host 入口待后续任务实现）
+```bash
+npm install
+npm start
+```
+
+浏览器打开 [http://127.0.0.1:7788](http://127.0.0.1:7788)（端口可通过环境变量 `CMS_PORT` 覆盖，默认 `7788`）。
+
+## 装 hooks
+
+灯效依赖 Claude Code / Codex 官方 hooks 转发事件到 Host。**不会自动改你的配置**，请按 [scripts/install-hooks.md](scripts/install-hooks.md) 手动安装并信任 hook 命令。
+
+## MVP 验收（Spec §6.2）
+
+1. 双 agent 同时在线，右侧终端可读可输入
+2. 杀 Host 再起，原 tmux session 可 reattach，对话不丢
+3. ✓ / ✕ / 新建 对当前槽生效（键序以 `config.keymap` 为准）
+4. 人为断开 hooks 后，灯**不**随 pane 文本变色（负面回归；自动化见 `host/state/no-pane-inference.test.js`）
+5. Claude Code：可见路径 `thinking` / `needs_input` / `complete`→`idle`
+6. Codex hooks：同上；legacy notify 至少验证 `complete`；打开 app-server 后 `awaiting_approval`→黄灯
+7. 双槽不串：错 `sessionKey` 的事件被丢弃
