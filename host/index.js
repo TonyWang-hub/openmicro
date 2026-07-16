@@ -16,6 +16,7 @@ import {
 import { createPtySession } from './tmux/pty-session.js';
 import { createHub } from './ws/hub.js';
 import { createCommandRouter } from './command-router.js';
+import { createCodexAppServerIngest } from './adapters/codex-app-server.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -204,6 +205,25 @@ async function main() {
     mapRaw: createAdapterMapRaw({ codexAppServerEnabled: config.codexAppServerEnabled }),
   });
 
+  /** @type {ReturnType<typeof createCodexAppServerIngest> | null} */
+  let appServerIngest = null;
+  if (config.codexAppServerEnabled) {
+    const codexBinding = config.slots.find((s) => s.agent === 'codex');
+    if (codexBinding) {
+      appServerIngest = createCodexAppServerIngest({
+        enabled: true,
+        store,
+        binding: codexBinding,
+        onLog: ({ level, message }) => {
+          console.warn(`[cms] ${message}`);
+          hub.broadcast({ type: 'log', level, message });
+        },
+      });
+      // Connect failures warn only — never crash Host.
+      await appServerIngest.start();
+    }
+  }
+
   const server = http.createServer(async (req, res) => {
     const pathname = req.url?.split('?')[0] || '/';
 
@@ -313,6 +333,10 @@ async function main() {
 
   function shutdown() {
     clearInterval(tickTimer);
+    if (appServerIngest) {
+      appServerIngest.stop().catch(() => {});
+      appServerIngest = null;
+    }
     for (const pty of ptys.values()) {
       try { pty.dispose(); } catch { /* ignore */ }
     }
