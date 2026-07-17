@@ -50,6 +50,30 @@ describe('createAuth.check', () => {
     );
   });
 
+  it('accepts non-loopback with correct token via cms_token cookie (browser sub-resource path)', () => {
+    const auth = createAuth({ token: 'secret' });
+    assert.equal(
+      auth.check(req({
+        remoteAddress: '10.0.0.5',
+        url: '/toy/keyboard.js',
+        headers: { cookie: 'other=1; cms_token=secret; foo=bar' },
+      })),
+      true,
+    );
+  });
+
+  it('rejects non-loopback with wrong cms_token cookie', () => {
+    const auth = createAuth({ token: 'secret' });
+    assert.equal(
+      auth.check(req({
+        remoteAddress: '10.0.0.5',
+        url: '/toy/keyboard.js',
+        headers: { cookie: 'cms_token=nope' },
+      })),
+      false,
+    );
+  });
+
   it('does not throw on mismatched token length (constant-time compare)', () => {
     const auth = createAuth({ token: 'secret' });
     assert.doesNotThrow(() => {

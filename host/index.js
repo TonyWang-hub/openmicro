@@ -149,8 +149,10 @@ function safeVendorPath(urlPath) {
 /**
  * @param {string} filePath
  * @param {import('node:http').ServerResponse} res
+ * @param {Record<string, string>} [extraHeaders] merged onto the 200 response
+ *   (e.g. Set-Cookie); content-type is derived from the extension unless overridden.
  */
-function sendFile(filePath, res) {
+function sendFile(filePath, res, extraHeaders) {
   fs.readFile(filePath, (err, data) => {
     if (err) {
       res.writeHead(err.code === 'ENOENT' ? 404 : 500);
@@ -158,7 +160,8 @@ function sendFile(filePath, res) {
       return;
     }
     const ext = path.extname(filePath);
-    res.writeHead(200, { 'content-type': MIME[ext] || 'application/octet-stream' });
+    const headers = { 'content-type': MIME[ext] || 'application/octet-stream', ...extraHeaders };
+    res.writeHead(200, headers);
     res.end(data);
   });
 }
@@ -378,9 +381,18 @@ async function main() {
           res.end(PAIRING_GUIDANCE_HTML);
           return;
         }
+        // Set an auth cookie so the browser's subsequent same-origin
+        // sub-resource requests (ES module imports, stylesheet) pass auth —
+        // those requests carry neither the ?token= query nor the header.
+        // HttpOnly (never read by JS; live.js uses the URL token), SameSite=Lax.
+        const headers = { 'content-type': 'text/html; charset=utf-8' };
+        if (config.token) {
+          headers['set-cookie'] =
+            `cms_token=${encodeURIComponent(config.token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`;
+        }
         // web/m.html is produced by another agent and may not exist yet;
         // a plain 404 from sendFile is fine per spec.
-        sendFile(path.join(WEB_DIR, 'm.html'), res);
+        sendFile(path.join(WEB_DIR, 'm.html'), res, headers);
         return;
       }
 

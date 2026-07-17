@@ -9,9 +9,32 @@ export function isLoopbackAddress(remoteAddress) {
   return typeof remoteAddress === 'string' && LOOPBACK_ADDRESSES.has(remoteAddress);
 }
 
+const COOKIE_NAME = 'cms_token';
+
 /**
- * Extract the pairing token from a request: URL query `?token=` first,
- * falling back to the `x-cms-token` header.
+ * Read the pairing cookie from a request's Cookie header.
+ * @param {import('node:http').IncomingMessage} req
+ * @returns {string | null}
+ */
+function extractCookieToken(req) {
+  const raw = req.headers?.cookie;
+  if (typeof raw !== 'string' || !raw) return null;
+  for (const part of raw.split(';')) {
+    const eq = part.indexOf('=');
+    if (eq === -1) continue;
+    if (part.slice(0, eq).trim() === COOKIE_NAME) {
+      return decodeURIComponent(part.slice(eq + 1).trim());
+    }
+  }
+  return null;
+}
+
+/**
+ * Extract the pairing token from a request: URL query `?token=` first, then
+ * the `x-cms-token` header, then the `cms_token` cookie. The cookie is what
+ * lets a browser reach same-origin sub-resources (ES module imports,
+ * stylesheets) after the initial `/m?token=` page load sets it — those
+ * sub-resource requests carry neither the query param nor the header.
  * @param {import('node:http').IncomingMessage} req
  * @returns {string | null}
  */
@@ -22,12 +45,12 @@ function extractToken(req) {
     const fromQuery = parsed.searchParams.get('token');
     if (fromQuery) return fromQuery;
   } catch {
-    // malformed URL — fall through to header lookup
+    // malformed URL — fall through to header/cookie lookup
   }
   const header = req.headers?.['x-cms-token'];
   if (typeof header === 'string' && header) return header;
   if (Array.isArray(header) && header[0]) return header[0];
-  return null;
+  return extractCookieToken(req);
 }
 
 /**
