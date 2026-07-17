@@ -20,17 +20,11 @@ function startServer(handler) {
 }
 
 describe('createIngestHandler', () => {
-  it('valid hooks → store becomes thinking', async () => {
+  it('valid hooks → auto-assigned slot becomes thinking', async () => {
     const store = createStore({ completeHoldMs: 2000, ingestStaleMs: 30_000 });
-    store.bindSlot({ slotId: 0, agent: 'claude-code', sessionKey: 'cms-claude-0' });
-
-    const bindings = new Map([
-      ['cms-claude-0', { slotId: 0, agent: 'claude-code', sessionKey: 'cms-claude-0' }],
-    ]);
 
     const handler = createIngestHandler({
       store,
-      resolveBinding: (sessionKey) => bindings.get(sessionKey) ?? null,
       mapRaw: (_agent, _channel, payload, binding) => mapClaudeHook(payload, binding),
     });
 
@@ -42,51 +36,47 @@ describe('createIngestHandler', () => {
         body: JSON.stringify({
           agent: 'claude-code',
           channel: 'hooks',
-          sessionKey: 'cms-claude-0',
+          sessionKey: 'sess-abc',
+          label: 'my-project',
           payload: { hookEventName: 'PreToolUse' },
         }),
       });
 
       assert.equal(res.status, 200);
       assert.deepEqual(await res.json(), { ok: true });
-      assert.equal(store.snapshot()[0].state, 'thinking');
+      const snap = store.snapshot();
+      assert.equal(snap[0].state, 'thinking');
+      assert.equal(snap[0].sessionKey, 'sess-abc');
+      assert.equal(snap[0].label, 'my-project');
     } finally {
       server.close();
     }
   });
 
-  it('unknown sessionKey → 400 and store unchanged', async () => {
+  it('unknown/new sessionKey is auto-assigned (no 400) — two sessions get two slots', async () => {
     const store = createStore({ completeHoldMs: 2000, ingestStaleMs: 30_000 });
-    store.bindSlot({ slotId: 0, agent: 'claude-code', sessionKey: 'cms-claude-0' });
-
-    const bindings = new Map([
-      ['cms-claude-0', { slotId: 0, agent: 'claude-code', sessionKey: 'cms-claude-0' }],
-    ]);
 
     const handler = createIngestHandler({
       store,
-      resolveBinding: (sessionKey) => bindings.get(sessionKey) ?? null,
       mapRaw: (_agent, _channel, payload, binding) => mapClaudeHook(payload, binding),
     });
 
     const { server, url } = await startServer(handler);
+    const post = (sessionKey, label) => fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        agent: 'claude-code', channel: 'hooks', sessionKey, label,
+        payload: { hookEventName: 'PreToolUse' },
+      }),
+    });
     try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          agent: 'claude-code',
-          channel: 'hooks',
-          sessionKey: 'cms-claude-UNKNOWN',
-          payload: { hookEventName: 'PreToolUse' },
-        }),
-      });
-
-      assert.equal(res.status, 400);
-      const body = await res.json();
-      assert.equal(body.ok, false);
-      assert.ok(body.error);
-      assert.equal(store.snapshot()[0].state, 'unknown');
+      assert.equal((await post('sess-1', 'projA')).status, 200);
+      assert.equal((await post('sess-2', 'projB')).status, 200);
+      const snap = store.snapshot();
+      assert.equal(snap.length, 2);
+      assert.deepEqual(snap.map((s) => s.sessionKey).sort(), ['sess-1', 'sess-2']);
+      assert.deepEqual(snap.map((s) => s.label).sort(), ['projA', 'projB']);
     } finally {
       server.close();
     }

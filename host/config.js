@@ -68,9 +68,9 @@ export function loadConfig(env = process.env) {
       'claude-code': env.CMS_CMD_CLAUDE || 'claude',
       codex: env.CMS_CMD_CODEX || 'codex',
     },
-    slots: [
-      { slotId: 0, agent: 'claude-code', sessionKey: 'cms-claude-0' },
-      { slotId: 1, agent: 'codex', sessionKey: 'cms-codex-1' },
-    ],
+    // Slots are assigned dynamically per live session_id (auto-track every
+    // running agent). Default: no static pre-binding. A pinned binding can
+    // still be added here if a fixed slot is ever wanted.
+    slots: [],
   };
 }

@@ -5,8 +5,9 @@ import { createCommandRouter } from './command-router.js';
 
 function makeFakes() {
   const store = createStore({ completeHoldMs: 2000, ingestStaleMs: 30_000 });
-  store.bindSlot({ slotId: 0, agent: 'claude-code', sessionKey: 'cms-claude-0' });
-  store.bindSlot({ slotId: 1, agent: 'codex', sessionKey: 'cms-codex-1' });
+  // Sessions auto-assigned with a tmuxTarget (the injectable pane name).
+  store.resolveSession({ sessionKey: 'sess-claude', agent: 'claude-code', label: 'projA', tmuxTarget: 'cms-claude-0' });
+  store.resolveSession({ sessionKey: 'sess-codex', agent: 'codex', label: 'projB', tmuxTarget: 'cms-codex-1' });
 
   const tmuxCalls = [];
   const ptyCalls = [];
@@ -68,7 +69,7 @@ describe('createCommandRouter', () => {
   it('sendKeys failure emits error+log and does not change lights', async () => {
     const { store, emitted, router } = makeFakes();
     store.applyEvent({
-      v: 1, slotId: 0, agent: 'claude-code', sessionKey: 'cms-claude-0',
+      v: 1, slotId: 0, agent: 'claude-code', sessionKey: 'sess-claude',
       state: 'needs_input', ts: new Date().toISOString(), source: 'cc-hooks',
     });
     const tmux = {

@@ -73,7 +73,8 @@ function parseIngestBody(body) {
     return { ok: false, error: 'body must be a JSON object' };
   }
 
-  const { agent, channel, sessionKey, payload } = /** @type {Record<string, unknown>} */ (body);
+  const { agent, channel, sessionKey, payload, label, tmuxTarget } =
+    /** @type {Record<string, unknown>} */ (body);
 
   if (!VALID_AGENTS.has(/** @type {string} */ (agent))) {
     return { ok: false, error: 'invalid agent' };
@@ -94,6 +95,8 @@ function parseIngestBody(body) {
       agent: /** @type {AgentKind} */ (agent),
       channel: /** @type {IngestChannel} */ (channel),
       sessionKey,
+      label: typeof label === 'string' ? label : null,
+      tmuxTarget: typeof tmuxTarget === 'string' && tmuxTarget ? tmuxTarget : null,
       payload: /** @type {Record<string, unknown>} */ (payload),
     },
   };
@@ -112,14 +115,13 @@ function sendJson(res, status, body) {
 /**
  * @typedef {object} IngestHandlerOptions
  * @property {ReturnType<import('../state/agent-state-store.js').createStore>} store
- * @property {(sessionKey: string) => SlotBinding | null | undefined} resolveBinding
  * @property {(agent: AgentKind, channel: IngestChannel, payload: Record<string, unknown>, binding: SlotBinding) => import('../types.js').AgentLightEvent | null} [mapRaw]
  */
 
 /**
  * @param {IngestHandlerOptions} options
  */
-export function createIngestHandler({ store, resolveBinding, mapRaw = createAdapterMapRaw() }) {
+export function createIngestHandler({ store, mapRaw = createAdapterMapRaw() }) {
   return async function handleIngest(req, res) {
     const pathname = req.url?.split('?')[0];
     if (req.method !== 'POST' || pathname !== '/ingest/hook') {
@@ -142,16 +144,11 @@ export function createIngestHandler({ store, resolveBinding, mapRaw = createAdap
       return;
     }
 
-    const { agent, channel, sessionKey, payload } = parsed.value;
-    const binding = resolveBinding(sessionKey);
-    if (!binding) {
-      sendJson(res, 400, { ok: false, error: 'unknown sessionKey' });
-      return;
-    }
-    if (binding.sessionKey !== sessionKey || binding.agent !== agent) {
-      sendJson(res, 400, { ok: false, error: 'binding mismatch' });
-      return;
-    }
+    const { agent, channel, sessionKey, label, tmuxTarget, payload } = parsed.value;
+    // Auto-assign a slot for this live session (session_id). No "unknown
+    // sessionKey" rejection: any session that reaches here claims/keeps a slot.
+    const slotId = store.resolveSession({ sessionKey, agent, label, tmuxTarget });
+    const binding = { slotId, agent, sessionKey };
 
     const event = mapRaw(agent, channel, payload, binding);
     if (!event) {

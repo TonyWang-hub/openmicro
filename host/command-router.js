@@ -70,9 +70,18 @@ export function createCommandRouter({
       fail(`no keymap for ${slot.agent}.${request.action}`);
       return;
     }
+    // Injection target is the tmux session name reported by the forwarder, NOT
+    // the sessionKey (which is now the agent's session_id UUID). A session not
+    // running inside tmux has no pane to inject into — surface that as an LCD
+    // hint, not a hard error (monitoring still works; only remote keys can't).
+    const target = slot.tmuxTarget;
+    if (!target) {
+      emit({ type: 'log', level: 'info', message: `${slot.label ?? 'session'} 不在 tmux，无法远程按键` });
+      return;
+    }
     try {
-      await tmux.sendKeys(slot.sessionKey, keys);
-      emit({ type: 'log', level: 'info', message: `${request.action} → ${slot.sessionKey}` });
+      await tmux.sendKeys(target, keys);
+      emit({ type: 'log', level: 'info', message: `${request.action} → ${target}` });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       fail(message);
@@ -99,8 +108,11 @@ export function createCommandRouter({
       return;
     }
 
+    // The tmux session name is the injectable target (from the forwarder), or
+    // the sessionKey when a slot was statically pre-bound.
+    const tmuxName = slot.tmuxTarget ?? slot.sessionKey;
     try {
-      const exists = await tmux.sessionExists(slot.sessionKey);
+      const exists = await tmux.sessionExists(tmuxName);
       if (!exists) {
         const command = commands[slot.agent];
         if (!command) {
@@ -108,23 +120,23 @@ export function createCommandRouter({
           return;
         }
         await tmux.newSession({
-          name: slot.sessionKey,
+          name: tmuxName,
           cwd: defaultCwd,
           command,
         });
         emit({
           type: 'log',
           level: 'info',
-          message: `created tmux session ${slot.sessionKey} (${command})`,
+          message: `created tmux session ${tmuxName} (${command})`,
         });
       } else {
         emit({
           type: 'log',
           level: 'info',
-          message: `reattach existing session ${slot.sessionKey}`,
+          message: `reattach existing session ${tmuxName}`,
         });
       }
-      attachPty(slot.slotId, slot.sessionKey);
+      attachPty(slot.slotId, tmuxName);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       fail(message);

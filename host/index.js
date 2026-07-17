@@ -302,12 +302,11 @@ async function main() {
     emit: (msg) => hub.broadcast(msg),
   });
 
-  /** @type {Map<string, { slotId: number, agent: string, sessionKey: string }>} */
-  const bindingsBySession = new Map();
-
+  // Slots are assigned dynamically per live session_id (store.resolveSession).
+  // Any statically pre-configured slots in config.slots are still honored
+  // (e.g. a pinned demo/manual binding), but the default is no static slots.
   for (const slot of config.slots) {
     store.bindSlot(slot);
-    bindingsBySession.set(slot.sessionKey, slot);
     if (tmuxOk) {
       try {
         if (await sessionExists(slot.sessionKey)) {
@@ -323,27 +322,27 @@ async function main() {
 
   const handleIngest = createIngestHandler({
     store,
-    resolveBinding: (sessionKey) => bindingsBySession.get(sessionKey) ?? null,
     mapRaw: createAdapterMapRaw({ codexAppServerEnabled: config.codexAppServerEnabled }),
   });
 
   /** @type {ReturnType<typeof createCodexAppServerIngest> | null} */
   let appServerIngest = null;
   if (config.codexAppServerEnabled) {
-    const codexBinding = config.slots.find((s) => s.agent === 'codex');
-    if (codexBinding) {
-      appServerIngest = createCodexAppServerIngest({
-        enabled: true,
-        store,
-        binding: codexBinding,
-        onLog: ({ level, message }) => {
-          console.warn(`[cms] ${message}`);
-          hub.broadcast({ type: 'log', level, message });
-        },
-      });
-      // Connect failures warn only — never crash Host.
-      await appServerIngest.start();
-    }
+    // Experimental app-server path: no static codex slot exists by default, so
+    // synthesize a dynamically-assigned one keyed on a fixed sessionKey.
+    const codexBinding = config.slots.find((s) => s.agent === 'codex')
+      ?? { slotId: store.resolveSession({ sessionKey: 'cms-codex-appserver', agent: 'codex', label: 'codex' }), agent: 'codex', sessionKey: 'cms-codex-appserver' };
+    appServerIngest = createCodexAppServerIngest({
+      enabled: true,
+      store,
+      binding: codexBinding,
+      onLog: ({ level, message }) => {
+        console.warn(`[cms] ${message}`);
+        hub.broadcast({ type: 'log', level, message });
+      },
+    });
+    // Connect failures warn only — never crash Host.
+    await appServerIngest.start();
   }
 
   const server = http.createServer(async (req, res) => {
