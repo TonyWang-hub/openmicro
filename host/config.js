@@ -1,10 +1,17 @@
 import path from 'node:path';
 import os from 'node:os';
 
-/** Default per-agent accept/reject key sequences (best-effort, real-device calibration pending). */
+// Default per-agent accept/reject key sequences. Verified 2026-07-17 against
+// the real TUIs (see docs/specs keymap-calibration note):
+//   claude-code permission dialog: "❯ 1. Yes / 2. … / 3. No" — press "1" to
+//     accept, Esc to cancel. Single "1", no Enter (arrow-menu, not a text field).
+//   codex approval dialog: "1. Yes, proceed (y) / 2. … (p) / 3. No … (esc)" —
+//     "y" is a hotkey that confirms immediately, so accept is ["y"] with NO
+//     trailing Enter (a stray Enter would submit an empty prompt afterwards);
+//     reject is Esc, not "n" (the dialog offers no "n" shortcut).
 const DEFAULT_KEYMAP = Object.freeze({
   'claude-code': { accept: ['1'], reject: ['Escape'] },
-  codex: { accept: ['y', 'Enter'], reject: ['n', 'Enter'] },
+  codex: { accept: ['y'], reject: ['Escape'] },
 });
 
 /**

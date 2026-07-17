@@ -25,11 +25,11 @@ describe('loadConfig', () => {
     assert.equal(cfg.token, 'abc123');
   });
 
-  it('defaults keymap to claude-code accept 1 / reject Escape, codex accept y+Enter / reject n+Enter', () => {
+  it('defaults keymap to verified values: claude-code 1/Escape, codex y/Escape', () => {
     const cfg = loadConfig({});
     assert.deepEqual(cfg.keymap, {
       'claude-code': { accept: ['1'], reject: ['Escape'] },
-      codex: { accept: ['y', 'Enter'], reject: ['n', 'Enter'] },
+      codex: { accept: ['y'], reject: ['Escape'] },
     });
   });
 
@@ -37,7 +37,7 @@ describe('loadConfig', () => {
     const cfg = loadConfig({ CMS_KEYMAP: '{"claude-code":{"accept":["2"]}}' });
     assert.deepEqual(cfg.keymap, {
       'claude-code': { accept: ['2'], reject: ['Escape'] },
-      codex: { accept: ['y', 'Enter'], reject: ['n', 'Enter'] },
+      codex: { accept: ['y'], reject: ['Escape'] },
     });
   });
 
@@ -49,7 +49,7 @@ describe('loadConfig', () => {
       const cfg = loadConfig({ CMS_KEYMAP: '{not valid json' });
       assert.deepEqual(cfg.keymap, {
         'claude-code': { accept: ['1'], reject: ['Escape'] },
-        codex: { accept: ['y', 'Enter'], reject: ['n', 'Enter'] },
+        codex: { accept: ['y'], reject: ['Escape'] },
       });
       assert.equal(warnCalls.length, 1);
     } finally {

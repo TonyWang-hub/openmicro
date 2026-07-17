@@ -46,12 +46,12 @@ Codex Micro（OpenAI × Work Louder $230 限量实体宏键盘）的软件模拟
 ```
 
 - 音色切换：**长按键盘上的黑色触摸圆钮**（POM 清脆轴 / POK 静音轴），localStorage 记忆
-- Live 审批注入默认：claude-code `['1']` / codex `['y','Enter']`，`CMS_KEYMAP` JSON 可覆盖——**⚠️ 未经真机校准，首次使用需对着真实权限对话实测**
+- Live 审批注入默认：claude-code `accept:['1'] reject:['Escape']` / codex `accept:['y'] reject:['Escape']`——**已于 2026-07-17 对真实 TUI 实测校准**（claude 权限对话按 1 接受、Esc 取消；codex 审批对话 `y` 热键接受、Esc 拒绝，均端到端验证文件真的写/未写）。`CMS_KEYMAP` JSON 可覆盖
 - ⚠️ 对外发布前必须改名（Tactic Remote 被要求改名的前科；"Codex Micro" 是对方产品名）
 
 ## 状态
 
-MVP 接线（B+C：tmux + 官方事件灯效）已落地（Spec：`docs/specs/2026-07-17-wiring-b-plus-c.md`）。玩具 Demo/Live 双模式已实现并自动化验证（93 tests + 端到端：注入 Notification → 手机键盘黄灯亮 → 按 ✓ → 键序注入真实 tmux）。待真机验收：音效/震动手感、Live keymap 校准。
+MVP 接线（B+C：tmux + 官方事件灯效）已落地（Spec：`docs/specs/2026-07-17-wiring-b-plus-c.md`）。玩具 Demo/Live 双模式已实现并自动化验证（93 tests + 端到端：注入 Notification → 手机键盘黄灯亮 → 按 ✓ → 键序注入真实 tmux）。Live keymap 已对真实 Claude Code + Codex TUI 实测校准。待真机验收：手机上的音效/震动手感。
 
 ## 相关
 
