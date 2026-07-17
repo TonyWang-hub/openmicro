@@ -89,53 +89,55 @@ export function createToyKeyboard({ root, handlers = {} }) {
   fit();
 
   // --- pressed visual for any key ---
-  function pressify(el, { down, up }) {
-    let pressed = false;
-    el.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      pressed = true;
-      el.classList.add('pressed');
-      el.setPointerCapture?.(e.pointerId);
-      down?.(e);
+  // Tap keys fire on `click` — the one tap event iOS Safari delivers reliably.
+  // (The previous pointerdown/pointerup + setPointerCapture approach dropped the
+  // "up" on mobile Safari, so command keys silently did nothing on a phone.)
+  // pointerdown/up only drive the pressed-down visual, best-effort per engine.
+  function tapify(el, onTap) {
+    el.addEventListener('pointerdown', () => el.classList.add('pressed'));
+    const clear = () => el.classList.remove('pressed');
+    el.addEventListener('pointerup', clear);
+    el.addEventListener('pointercancel', clear);
+    el.addEventListener('pointerleave', clear);
+    el.addEventListener('click', (e) => {
+      clear();
+      if (el.classList.contains('disabled')) return;
+      onTap(e);
     });
-    const release = (e) => {
-      if (!pressed) return;
-      pressed = false;
-      el.classList.remove('pressed');
-      up?.(e);
-    };
-    el.addEventListener('pointerup', release);
-    el.addEventListener('pointercancel', release);
+  }
+
+  // Hold keys (PTT) need press-and-hold semantics: start on pointerdown, stop on
+  // release/cancel/leave. Capture so a finger sliding off still ends the hold.
+  function holdify(el, { down, up }) {
+    let held = false;
+    el.addEventListener('pointerdown', (e) => {
+      if (el.classList.contains('disabled')) return;
+      held = true;
+      el.setPointerCapture?.(e.pointerId);
+      down?.();
+    });
+    const end = () => { if (held) { held = false; up?.(); } };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    el.addEventListener('pointerleave', end);
   }
 
   // --- agent keys ---
   agents.forEach((el) => {
     const slotId = Number(el.dataset.agent);
-    pressify(el, {
-      down: () => handlers.onAgentKey && undefined,
-      up: () => handlers.onAgentKey?.(slotId),
-    });
+    tapify(el, () => handlers.onAgentKey?.(slotId));
   });
 
   // --- command keys ---
   root.querySelectorAll('[data-cmd]').forEach((el) => {
     const action = el.dataset.cmd;
-    pressify(el, {
-      up: () => {
-        if (el.classList.contains('disabled')) return;
-        handlers.onCmd?.(action);
-      },
-    });
+    tapify(el, () => handlers.onCmd?.(action));
   });
 
   // --- PTT: hold to talk ---
   const mic = $('[data-mic]');
-  pressify(mic, {
-    down: () => {
-      if (mic.classList.contains('disabled')) return;
-      mic.classList.add('recording');
-      handlers.onPttStart?.();
-    },
+  holdify(mic, {
+    down: () => { mic.classList.add('recording'); handlers.onPttStart?.(); },
     up: () => {
       if (!mic.classList.contains('recording')) return;
       mic.classList.remove('recording');
@@ -147,7 +149,7 @@ export function createToyKeyboard({ root, handlers = {} }) {
   const knob = $('[data-knob]');
   const dialv = $('[data-dialv]');
   let knobIdx = 1;
-  knob.addEventListener('pointerup', () => {
+  tapify(knob, () => {
     knobIdx = (knobIdx + 1) % KNOB_LEVELS.length;
     knob.style.transform = `rotate(${knobIdx * 65 - 65}deg)`;
     dialv.textContent = `REASONING · ${KNOB_LEVELS[knobIdx]}`;
@@ -156,10 +158,10 @@ export function createToyKeyboard({ root, handlers = {} }) {
 
   // --- joystick: quadrant tap nudges the cap ---
   const joy = $('[data-joy]');
-  joy.addEventListener('pointerup', (e) => {
+  tapify(joy, (e) => {
     const r = joy.getBoundingClientRect();
-    const x = e.clientX - r.left - r.width / 2;
-    const y = e.clientY - r.top - r.height / 2;
+    const x = (e.clientX ?? r.left + r.width / 2) - r.left - r.width / 2;
+    const y = (e.clientY ?? r.top + r.height / 2) - r.top - r.height / 2;
     const horizontal = Math.abs(x) > Math.abs(y);
     const dir = horizontal ? (x > 0 ? 'right' : 'left') : (y > 0 ? 'down' : 'up');
     const nudge = { left: [-8, 0], right: [8, 0], up: [0, -8], down: [0, 8] }[dir];
@@ -169,7 +171,7 @@ export function createToyKeyboard({ root, handlers = {} }) {
     handlers.onJoy?.(dir);
   });
 
-  // --- touch sensor: tap + long-press (spec §4 音色切换入口) ---
+  // --- touch sensor: tap + long-press (音色切换入口) ---
   const touch = $('[data-touch]');
   let touchTimer = null;
   let longFired = false;
@@ -180,12 +182,16 @@ export function createToyKeyboard({ root, handlers = {} }) {
       handlers.onTouchLongPress?.();
     }, 600);
   });
-  const touchEnd = () => {
+  const touchEndClear = () => clearTimeout(touchTimer);
+  touch.addEventListener('pointercancel', touchEndClear);
+  touch.addEventListener('pointerleave', touchEndClear);
+  // Fire the short-tap action on click (reliable on iOS); long-press already
+  // fired via the timer, so suppress the click-tap in that case.
+  touch.addEventListener('click', () => {
     clearTimeout(touchTimer);
-    if (!longFired) handlers.onTouch?.();
-  };
-  touch.addEventListener('pointerup', touchEnd);
-  touch.addEventListener('pointercancel', () => clearTimeout(touchTimer));
+    if (longFired) { longFired = false; return; }
+    handlers.onTouch?.();
+  });
 
   // --- public surface ---
   let lcdTimer = null;
