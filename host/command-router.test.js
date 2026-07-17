@@ -66,6 +66,23 @@ describe('createCommandRouter', () => {
     assert.deepEqual(tmuxCalls, [['sendKeys', 'cms-codex-1', ['n', 'Enter']]]);
   });
 
+  it('prefers cmux injection when the slot has a cmuxTarget', async () => {
+    const store = createStore({ completeHoldMs: 2000, ingestStaleMs: 30_000 });
+    store.resolveSession({ sessionKey: 's', agent: 'claude-code', label: 'p', cmuxTarget: 'SURFACE-UUID', tmuxTarget: 'tmux-name' });
+    const tmuxCalls = []; const cmuxCalls = [];
+    const router = createCommandRouter({
+      store,
+      tmux: { sessionExists: async () => true, newSession: async () => {}, sendKeys: async (n, k) => tmuxCalls.push([n, k]) },
+      cmux: { sendKeys: async (ref, keys) => cmuxCalls.push([ref, keys]) },
+      keymap: { 'claude-code': { accept: ['1'], reject: ['Escape'] }, codex: { accept: ['y'], reject: ['Escape'] } },
+      commands: { 'claude-code': 'claude', codex: 'codex' },
+      defaultCwd: '/tmp', attachPty: () => {}, emit: () => {},
+    });
+    await router.handleCommand(cmd(0, 'accept'));
+    assert.deepEqual(cmuxCalls, [['SURFACE-UUID', ['1']]]);
+    assert.deepEqual(tmuxCalls, [], 'must NOT fall back to tmux when cmux target exists');
+  });
+
   it('sendKeys failure emits error+log and does not change lights', async () => {
     const { store, emitted, router } = makeFakes();
     store.applyEvent({

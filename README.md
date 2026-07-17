@@ -49,6 +49,19 @@ Codex Micro（OpenAI × Work Louder $230 限量实体宏键盘）的软件模拟
 - Live 审批注入默认：claude-code `accept:['1'] reject:['Escape']` / codex `accept:['y'] reject:['Escape']`——**已于 2026-07-17 对真实 TUI 实测校准**（claude 权限对话按 1 接受、Esc 取消；codex 审批对话 `y` 热键接受、Esc 拒绝，均端到端验证文件真的写/未写）。`CMS_KEYMAP` JSON 可覆盖
 - ⚠️ 对外发布前必须改名（Tactic Remote 被要求改名的前科；"Codex Micro" 是对方产品名）
 
+## 全局 hooks（自动跟踪所有 claude/codex，2026-07-18，Spec `docs/specs/2026-07-18-auto-slot-assignment.md`）
+
+装一次全局 hooks，之后任何目录新开的 claude/codex 自动占一盏灯、按项目名（cwd）标注、超 6 个 LRU 回收。手机开 `/m?token=<token>&live=1`。
+
+**安装**：把 `scripts/cms-hook-forward.sh`（绝对路径）作为 `command` append 到 `~/.claude/settings.json` 的 `UserPromptSubmit`/`PreToolUse`/`Stop`/`Notification` 四个 hook 事件（每条前缀 `CMS_HOOK_AGENT=claude-code`）。**append，不要覆盖已有 hooks**。
+
+**卸载**（记一下）：
+1. 编辑 `~/.claude/settings.json`，删掉 4 处含 `cms-hook-forward` 的 hook 组（其余 hooks 不动）；或直接恢复安装时的备份 `~/.claude/settings.json.bak-<时间戳>`。
+2. 删完 claude 立即回原样，**零残留**。
+3. 即使不卸载：Host 没开着时转发脚本永远 `exit 0`、~6ms 返回、无任何报错噪音（fire-and-forget 已硬化），对正常用 claude 零影响。
+
+**远程按键支持 tmux 和 cmux**：会话跑在 **tmux**（`tmux send-keys`）或 **cmux**（`cmux send`/`send-key --surface`，自动读 `$CMUX_PANEL_ID` 定位）里都能远程按 ✓/✕；两者都不在则只能看灯。cmux 键名：可打印字符走 `send`、命名键（escape/enter）走 `send-key`。cmux CLI 路径可用 `CMS_CMUX_BIN` 覆盖（默认 PATH 的 `cmux`，回退 `/Applications/cmux.app/.../cmux`）。
+
 ## 状态
 
 MVP 接线（B+C：tmux + 官方事件灯效）已落地（Spec：`docs/specs/2026-07-17-wiring-b-plus-c.md`）。玩具 Demo/Live 双模式已实现并自动化验证（93 tests + 端到端：注入 Notification → 手机键盘黄灯亮 → 按 ✓ → 键序注入真实 tmux）。Live keymap 已对真实 Claude Code + Codex TUI 实测校准。待真机验收：手机上的音效/震动手感。

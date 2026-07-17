@@ -68,6 +68,9 @@ export function loadConfig(env = process.env) {
       'claude-code': env.CMS_CMD_CLAUDE || 'claude',
       codex: env.CMS_CMD_CODEX || 'codex',
     },
+    // cmux CLI for remote key injection into cmux surfaces. Falls back to the
+    // bundled app binary when `cmux` is not on PATH.
+    cmuxBin: env.CMS_CMUX_BIN || 'cmux',
     // Slots are assigned dynamically per live session_id (auto-track every
     // running agent). Default: no static pre-binding. A pinned binding can
     // still be added here if a fixed slot is ever wanted.

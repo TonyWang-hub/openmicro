@@ -16,6 +16,7 @@ import { MAX_SLOTS } from './types.js';
  * @typedef {object} CommandRouterOptions
  * @property {ReturnType<import('./state/agent-state-store.js').createStore>} store
  * @property {TmuxLike} tmux
+ * @property {{ sendKeys: (surfaceRef: string, keys: string[]) => Promise<void> }} [cmux]
  * @property {Record<string, { accept: string[], reject: string[] }>} keymap
  * @property {Record<string, string>} commands
  * @property {string} defaultCwd
@@ -30,6 +31,7 @@ import { MAX_SLOTS } from './types.js';
 export function createCommandRouter({
   store,
   tmux,
+  cmux = null,
   keymap,
   commands,
   defaultCwd,
@@ -70,18 +72,22 @@ export function createCommandRouter({
       fail(`no keymap for ${slot.agent}.${request.action}`);
       return;
     }
-    // Injection target is the tmux session name reported by the forwarder, NOT
-    // the sessionKey (which is now the agent's session_id UUID). A session not
-    // running inside tmux has no pane to inject into — surface that as an LCD
-    // hint, not a hard error (monitoring still works; only remote keys can't).
-    const target = slot.tmuxTarget;
-    if (!target) {
-      emit({ type: 'log', level: 'info', message: `${slot.label ?? 'session'} 不在 tmux，无法远程按键` });
-      return;
-    }
+    // Injection target comes from what the session's own forwarder reported —
+    // NOT the sessionKey (a session_id UUID). Prefer cmux (the user's actual
+    // multiplexer; that's where the TUI lives), then tmux. A session in neither
+    // has no surface/pane to inject into — an LCD hint, not a hard error
+    // (monitoring still works; only remote keys can't). Only ever the session's
+    // OWN reported surface is targeted.
     try {
-      await tmux.sendKeys(target, keys);
-      emit({ type: 'log', level: 'info', message: `${request.action} → ${target}` });
+      if (slot.cmuxTarget && cmux) {
+        await cmux.sendKeys(slot.cmuxTarget, keys);
+        emit({ type: 'log', level: 'info', message: `${request.action} → cmux ${slot.cmuxTarget}` });
+      } else if (slot.tmuxTarget) {
+        await tmux.sendKeys(slot.tmuxTarget, keys);
+        emit({ type: 'log', level: 'info', message: `${request.action} → tmux ${slot.tmuxTarget}` });
+      } else {
+        emit({ type: 'log', level: 'info', message: `${slot.label ?? 'session'} 不在 tmux/cmux，无法远程按键` });
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       fail(message);

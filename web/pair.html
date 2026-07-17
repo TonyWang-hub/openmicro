@@ -42,7 +42,12 @@
       try {
         const res = await fetch('/api/pair');
         if (!res.ok) throw new Error(`pair api ${res.status}`);
-        const { mobileUrl } = await res.json();
+        let { mobileUrl } = await res.json();
+        // /pair?live=1 → encode the Live-mode URL (tracks real agents) instead
+        // of the default Demo-mode URL, so scanning goes straight to live.
+        if (new URLSearchParams(location.search).get('live') === '1' && !/[?&]live=1/.test(mobileUrl)) {
+          mobileUrl += (mobileUrl.includes('?') ? '&' : '?') + 'live=1';
+        }
         urlEl.textContent = mobileUrl;
         const qr = qrcode(0, 'M');
         qr.addData(mobileUrl);

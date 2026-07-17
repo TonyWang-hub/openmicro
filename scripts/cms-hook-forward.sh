@@ -35,6 +35,11 @@ if [ -n "${TMUX:-}" ]; then
   TMUX_TARGET="$(tmux display-message -p '#S' 2>/dev/null || true)"
 fi
 
+# cmux (GUI multiplexer): the agent process inherits $CMUX_PANEL_ID, which IS
+# the surface UUID cmux `send-key --surface` targets. Report it so the Host can
+# inject into exactly this session's surface (and no other).
+CMUX_TARGET="${CMUX_PANEL_ID:-}"
+
 # tmuxTarget: empty string → JSON null. Do NOT use `select(.!="")` here — an
 # `empty` in a jq object value makes the WHOLE object evaluate to empty, so the
 # body would silently become "" and the POST would 400. `if/then/else` keeps
@@ -45,8 +50,8 @@ fi
 # invalid JSON and a silently-empty body.
 BODY="$(jq -n \
   --arg a "$AGENT" --arg c "$CHANNEL" --arg s "$SESSION_KEY" \
-  --arg l "$LABEL" --arg t "$TMUX_TARGET" --argjson p "$STDIN_JSON" \
-  '{agent:$a, channel:$c, sessionKey:$s, label:$l, tmuxTarget:($t | if . == "" then null else . end), payload:$p}' \
+  --arg l "$LABEL" --arg t "$TMUX_TARGET" --arg x "$CMUX_TARGET" --argjson p "$STDIN_JSON" \
+  '{agent:$a, channel:$c, sessionKey:$s, label:$l, tmuxTarget:($t | if . == "" then null else . end), cmuxTarget:($x | if . == "" then null else . end), payload:$p}' \
   2>/dev/null)" || exit 0
 
 # Synchronous, but bounded and error-swallowing. Backgrounding (`&`+disown) was

@@ -18,6 +18,7 @@ import {
 } from './tmux/client.js';
 import { createPtySession } from './tmux/pty-session.js';
 import { deletePtyIfCurrent } from './tmux/pty-map.js';
+import { createCmuxClient } from './cmux/client.js';
 import { createHub } from './ws/hub.js';
 import { createCommandRouter } from './command-router.js';
 import { createCodexAppServerIngest } from './adapters/codex-app-server.js';
@@ -87,6 +88,29 @@ const MIME = {
   '.png': 'image/png',
   '.ico': 'image/x-icon',
 };
+
+/**
+ * Resolve the cmux CLI binary: an explicit config path wins; otherwise prefer
+ * `cmux` on PATH (execFile finds it), falling back to the macOS bundled binary
+ * so the Host — which itself runs outside cmux — can still inject.
+ * @param {string} configured
+ * @returns {string}
+ */
+function resolveCmuxBin(configured) {
+  if (configured && configured !== 'cmux') return configured;
+  const bundled = '/Applications/cmux.app/Contents/Resources/bin/cmux';
+  if (configured === 'cmux') {
+    // Keep 'cmux' (PATH lookup) unless it's clearly absent and the bundle exists.
+    try {
+      if (fs.existsSync(bundled)) {
+        // Prefer PATH `cmux` if present; else use the bundle.
+        const onPath = (process.env.PATH || '').split(':').some((d) => d && fs.existsSync(path.join(d, 'cmux')));
+        return onPath ? 'cmux' : bundled;
+      }
+    } catch { /* ignore */ }
+  }
+  return configured || 'cmux';
+}
 
 function ensureWebPlaceholder() {
   if (!fs.existsSync(WEB_DIR)) {
@@ -292,9 +316,12 @@ async function main() {
     },
   });
 
+  // Resolve the cmux CLI: configured path → `cmux` on PATH → bundled app binary.
+  const cmuxBin = resolveCmuxBin(config.cmuxBin);
   router = createCommandRouter({
     store,
     tmux: { sessionExists, newSession, sendKeys },
+    cmux: createCmuxClient({ bin: cmuxBin }),
     keymap: config.keymap,
     commands: config.commands,
     defaultCwd: config.defaultCwd,

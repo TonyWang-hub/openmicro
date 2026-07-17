@@ -49,7 +49,7 @@ export function createStore({
   function snapshot() {
     return [...slots.values()]
       .sort((a, b) => a.slotId - b.slotId)
-      .map(({ slotId, agent, sessionKey, state, meta, lastEventAt, label, tmuxTarget }) => ({
+      .map(({ slotId, agent, sessionKey, state, meta, lastEventAt, label, tmuxTarget, cmuxTarget }) => ({
         slotId,
         agent,
         sessionKey,
@@ -58,6 +58,7 @@ export function createStore({
         lastEventAt,
         label: label ?? null,
         tmuxTarget: tmuxTarget ?? null,
+        cmuxTarget: cmuxTarget ?? null,
       }));
   }
 
@@ -111,15 +112,16 @@ export function createStore({
    * free slot on first sight and recycling by LRU when all MAX_SLOTS are taken.
    * This is what lets a global hook install auto-track every running agent
    * without any per-project sessionKey wiring.
-   * @param {{ sessionKey: string, agent: string, label?: string|null, tmuxTarget?: string|null }} info
+   * @param {{ sessionKey: string, agent: string, label?: string|null, tmuxTarget?: string|null, cmuxTarget?: string|null }} info
    * @returns {number} the assigned slotId
    */
-  function resolveSession({ sessionKey, agent, label = null, tmuxTarget = null }) {
+  function resolveSession({ sessionKey, agent, label = null, tmuxTarget = null, cmuxTarget = null }) {
     for (const slot of slots.values()) {
       if (slot.sessionKey === sessionKey) {
         slot.lastEventAt = now();
         if (label != null) slot.label = label;
         if (tmuxTarget != null) slot.tmuxTarget = tmuxTarget;
+        if (cmuxTarget != null) slot.cmuxTarget = cmuxTarget;
         if (agent) slot.agent = agent;
         return slot.slotId;
       }
@@ -153,6 +155,7 @@ export function createStore({
       lastEventAt: now(),
       label,
       tmuxTarget,
+      cmuxTarget,
     });
     emitChange();
     return target;
