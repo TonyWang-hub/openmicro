@@ -19,8 +19,12 @@
     import { createDemoDirector } from '/toy/demo-script.js';
     import { connectLive } from '/toy/live.js';
 
-    const token = new URLSearchParams(location.search).get('token');
-    const liveMode = Boolean(token);
+    // token 只做鉴权（局域网加载页面必须带它）；模式由显式 ?live=1 决定。
+    // 否则手机永远进 Live 模式（因为加载就必须带 token），玩不到 Demo。
+    // 默认 Demo：扫码即玩、假 agent 演戏；Live 需 ?token=X&live=1 显式开启。
+    const params = new URLSearchParams(location.search);
+    const token = params.get('token');
+    const liveMode = params.get('live') === '1' && Boolean(token);
 
     const profile = localStorage.getItem('toy-profile') || 'pom';
     const audio = createAudio({ profile });
