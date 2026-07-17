@@ -32,9 +32,9 @@
     // 首次任何手势先解锁音频（spec §6 autoplay 政策）
     addEventListener('pointerdown', () => audio.unlock(), { once: true, capture: true });
 
-    /** 焦点 slot：最近点过的 Agent 键；✓/✕ 优先作用于它 */
-    let focusedSlot = 0;
-    /** demo 引擎里各 slot 最近状态，用于 ✓/✕ 兜底找 needs_input */
+    /** 显式选中的 slot（点 Agent 键设定）。命令键只作用于它，null=未选。 */
+    let focusedSlot = null;
+    /** 各 slot 最近状态。 */
     const lastState = ['idle', 'idle', 'idle', 'idle', 'idle', 'idle'];
 
     let director = null;
@@ -46,28 +46,40 @@
         onAgentKey(slotId) {
           audio.keyUp('agent'); haptic('tap');
           focusedSlot = slotId;
-          if (liveMode) {
-            live?.sendCommand('focus', slotId);
-          } else {
-            director?.focus(slotId);
-          }
+          kbd.setFocused(slotId);
+          const who = liveMode ? (slotLabel(slotId) || `agent ${slotId}`) : `agent ${slotId}`;
+          kbd.flashLcd(`已选中 ${who}（◎✓/⊗ 只作用于它）`);
+          if (liveMode) live?.sendCommand('focus', slotId);
+          else director?.focus(slotId);
         },
         onCmd(action) {
           audio.keyUp('cmd'); haptic('press');
-          const target = pickTarget();
+          // 命令键必须先显式选中一盏 Agent 灯，绝不自动挑（防误注入到别的会话/对话窗口）。
+          if ((action === 'accept' || action === 'reject' || action === 'quick') && focusedSlot === null) {
+            kbd.flashLcd('先点一盏 Agent 灯选中它，再按此键');
+            haptic('alert');
+            return;
+          }
           if (liveMode) {
-            if (action === 'accept' || action === 'reject' || action === 'new_session') {
-              live?.sendCommand(action, target);
-            } else {
-              kbd.flashLcd('这颗键 Live 版二期再接', 'LIVE');
+            if (action === 'accept' || action === 'reject') {
+              live?.sendCommand(action, focusedSlot);
+              kbd.flashLcd(`${action === 'accept' ? '◎✓ 接受' : '⊗ 拒绝'} → ${slotLabel(focusedSlot) || ('agent ' + focusedSlot)}`);
+            } else if (action === 'quick') {
+              live?.sendCommand('quick', focusedSlot); // 注入回车：推进"按 Enter 继续"类提示
+              kbd.flashLcd(`⚡ 继续（回车）→ ${slotLabel(focusedSlot) || ('agent ' + focusedSlot)}`);
+            } else if (action === 'new_session') {
+              kbd.flashLcd('💭 新会话请在电脑上开 claude/codex，会自动上灯');
+            } else if (action === 'branch') {
+              kbd.flashLcd('⤴ 分叉是电脑端操作，手机不远程执行');
             }
             return;
           }
-          if (action === 'accept') director?.approve(target);
-          else if (action === 'reject') director?.reject(target);
-          else if (action === 'quick') kbd.flashLcd('⚡ quick action：agent 假装加速了 1.7 倍');
-          else if (action === 'branch') kbd.flashLcd('⤴ 已从当前思路分叉一条新线（假装的）');
-          else if (action === 'new_session') kbd.flashLcd('💭 新会话线程已创建（demo 里它自己会开工）');
+          // demo 模式
+          if (action === 'accept') director?.approve(focusedSlot);
+          else if (action === 'reject') director?.reject(focusedSlot);
+          else if (action === 'quick') kbd.flashLcd('⚡ 已催 agent 一把（继续）');
+          else if (action === 'branch') kbd.flashLcd('⤴ 从当前思路分叉一条新线（demo）');
+          else if (action === 'new_session') kbd.flashLcd('💭 新会话线程已创建（demo）');
         },
         onPttStart() {
           audio.pttStart(); haptic('alert');
@@ -79,16 +91,24 @@
         },
         onKnob(level) {
           audio.knobTick(); haptic('detent');
-          if (!liveMode) kbd.flashLcd(`思考力度 → ${level}（agent 表示压力${level === 'XHIGH' ? '山大' : '不大'}）`);
+          if (liveMode) kbd.flashLcd(`思考力度显示 ${level}（远程不改真 agent 设置）`);
+          else kbd.flashLcd(`思考力度 → ${level}（agent 表示压力${level === 'XHIGH' ? '山大' : '不大'}）`);
         },
         onJoy(dir) {
           audio.keyUp('cmd'); haptic('tap');
           if (dir === 'left' || dir === 'right') {
-            focusedSlot = (focusedSlot + (dir === 'right' ? 1 : 5)) % 6;
-            kbd.flashLcd(`焦点 → agent ${focusedSlot}`);
-            if (liveMode) live?.sendCommand('focus', focusedSlot);
+            // 在"活着的"slot 之间循环选中（live=有状态的；demo=全部 6 个）
+            const active = liveMode ? activeSlots() : [0, 1, 2, 3, 4, 5];
+            if (active.length === 0) { kbd.flashLcd('暂无活跃 agent'); return; }
+            const cur = active.indexOf(focusedSlot);
+            const next = active[(cur + (dir === 'right' ? 1 : active.length - 1) + active.length) % active.length];
+            focusedSlot = next;
+            kbd.setFocused(next);
+            kbd.flashLcd(`焦点 → ${slotLabel(next) || ('agent ' + next)}`);
+            if (liveMode) live?.sendCommand('focus', next);
+            else director?.focus(next);
           } else {
-            kbd.flashLcd(dir === 'up' ? '↟ 回到顶部（象征性地）' : '↡ 滚动日志（象征性地）');
+            kbd.flashLcd(dir === 'up' ? '↟ 回到顶部' : '↡ 滚动日志');
           }
         },
         onTouch() {
@@ -105,21 +125,26 @@
       },
     });
 
-    function pickTarget() {
-      if (lastState[focusedSlot] === 'needs_input') return focusedSlot;
-      const waiting = lastState.findIndex((s) => s === 'needs_input');
-      return waiting >= 0 ? waiting : focusedSlot;
-    }
+    /** slotId → 项目名（label），来自 live state 广播。 */
+    const slotLabels = {};
+    const slotLabel = (id) => slotLabels[id] || null;
+    /** live 模式下"活跃"（收到过状态）的 slotId 列表，升序。 */
+    const activeSlots = () => Object.keys(slotLabels).map(Number).sort((a, b) => a - b);
 
     if (liveMode) {
       kbd.setMicDisabled(false); // 键可按，松开时提示二期
       kbd.setLcd('LIVE · 连接中…');
       live = connectLive({
         token,
-        onState(slotId, state) {
+        onState(slotId, state, label) {
           lastState[slotId] = state;
+          if (label) slotLabels[slotId] = label;
           kbd.applyState(slotId, state);
-          if (state === 'needs_input') { haptic('alert'); kbd.setLcd(`agent ${slotId} 需要你 — 按 ◎✓ 或 ⊗`); }
+          if (state === 'needs_input') {
+            haptic('alert');
+            const who = slotLabel(slotId) || `agent ${slotId}`;
+            kbd.setLcd(`${who} 需要你 — 点它选中再按 ◎✓/⊗`);
+          }
         },
         onLcd(text) { kbd.setLcd(text); },
         onConnection(s) {

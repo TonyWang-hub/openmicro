@@ -67,7 +67,11 @@ export function createCommandRouter({
       fail(`slot ${request.slotId} not bound`);
       return;
     }
-    const keys = keymap[slot.agent]?.[request.action];
+    // `quick` = a "press Enter to continue" nudge — a fixed key, not a
+    // per-agent keymap entry.
+    const keys = request.action === 'quick'
+      ? ['Enter']
+      : keymap[slot.agent]?.[request.action];
     if (!keys?.length) {
       fail(`no keymap for ${slot.agent}.${request.action}`);
       return;
@@ -179,6 +183,7 @@ export function createCommandRouter({
     switch (action) {
       case 'accept':
       case 'reject':
+      case 'quick':
         await handleAcceptReject(request);
         break;
       case 'new_session':

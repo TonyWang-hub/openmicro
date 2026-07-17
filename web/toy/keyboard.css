@@ -188,6 +188,24 @@
 }
 .toy-agent .sw::before { content: "✛"; }
 
+/* 显式选中的 Agent 键：命令键只作用于它。深色描边环，一眼看清选了谁 */
+.toy-agent.focused .top {
+  outline: 3px solid #1f2937;
+  outline-offset: 3px;
+}
+.toy-agent.focused::after {
+  content: "◉";
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  font-size: 13px;
+  color: #1f2937;
+  background: #fff;
+  border-radius: 50%;
+  line-height: 1;
+  z-index: 2;
+}
+
 /* 整键发光（spec §4：状态色铺满键帽） */
 .a-idle .top { box-shadow: 0 6px 0 rgba(196, 203, 212, 0.9), 0 9px 11px rgba(0, 0, 0, 0.18), inset 0 0 14px rgba(255, 255, 255, 0.6); }
 .a-thinking .top {

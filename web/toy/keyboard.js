@@ -202,12 +202,30 @@ export function createToyKeyboard({ root, handlers = {} }) {
     $('[data-lcd-m]').textContent = text;
   }
 
+  let focusedSlotId = null;
+  const stateCls = (slotId, state) =>
+    `toy-key toy-agent a-${state}${slotId === focusedSlotId ? ' focused' : ''}`;
+
   return {
     /** @param {number} slotId @param {string} state one of STATES */
     applyState(slotId, state) {
       const el = agents[slotId];
       if (!el || !STATES.includes(state)) return;
-      el.className = `toy-key toy-agent a-${state}`;
+      el.dataset.state = state;
+      el.className = stateCls(slotId, state);
+    },
+    /**
+     * Highlight the explicitly-selected agent key. Command keys (accept/reject/
+     * quick) act ONLY on this slot — never an auto-picked one — so a tap can
+     * never fire into an unselected session.
+     * @param {number|null} slotId
+     */
+    setFocused(slotId) {
+      focusedSlotId = slotId;
+      agents.forEach((el, i) => {
+        const st = el.dataset.state || 'idle';
+        el.className = stateCls(i, st);
+      });
     },
     setLcd,
     /** Marquee a transient message, then restore. */

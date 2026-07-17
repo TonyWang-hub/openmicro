@@ -46,7 +46,7 @@ export function connectLive({ token, onState, onLcd, onConnection }) {
       if (msg.type === 'state' && Array.isArray(msg.slots)) {
         for (const slot of msg.slots) {
           if (typeof slot.slotId === 'number' && STATE_OK.has(slot.state)) {
-            onState(slot.slotId, slot.state);
+            onState(slot.slotId, slot.state, slot.label ?? null);
           }
         }
       } else if (msg.type === 'log' && typeof msg.message === 'string') {
