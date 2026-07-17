@@ -8,6 +8,9 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    // audioplayers platform channels aren't wired under `flutter test`; disable
+    // actual playback so triggering just exercises synthesis, not the plugin.
+    KeySound().playbackEnabled = false;
   });
 
   group('KeySound', () {

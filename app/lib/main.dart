@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'model/slot.dart';
 import 'keyboard/device.dart';
+import 'net/live_client.dart';
+import 'haptics/haptics.dart';
+import 'audio/keysound.dart';
 
-// M1: static keyboard screen with demo data so the device renders and the
-// layout can be验收. M2 wires this to LiveClient/Haptics/KeySound (separate
-// modules built in parallel); this file is the integration point.
-void main() => runApp(const MicroToyApp());
+// M2/M3: connect screen (paste pairing URL) → live keyboard wired to the Host
+// WS, with haptics + key sounds on interaction and the explicit-focus safety
+// guard (commands only ever hit the selected slot).
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Haptics.instance.init();
+  await KeySound().init();
+  runApp(const MicroToyApp());
+}
 
 class MicroToyApp extends StatelessWidget {
   const MicroToyApp({super.key});
@@ -15,26 +24,179 @@ class MicroToyApp extends StatelessWidget {
       title: 'MicroToy',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(useMaterial3: true, brightness: Brightness.light),
-      home: const KeyboardScreen(),
+      home: const ConnectScreen(),
+    );
+  }
+}
+
+/// Parsed connection target from a pairing URL / string.
+class Target {
+  final String host;
+  final int port;
+  final String token;
+  const Target(this.host, this.port, this.token);
+}
+
+/// Accepts a full pairing URL (`http://192.168.31.248:7788/m?token=toy2026&live=1`)
+/// or a bare `host:port` + separate token. Returns null if unparseable.
+Target? parseTarget(String raw, {String? tokenField}) {
+  raw = raw.trim();
+  if (raw.isEmpty) return null;
+  try {
+    if (raw.startsWith('http')) {
+      final u = Uri.parse(raw);
+      final tok = u.queryParameters['token'] ?? tokenField ?? '';
+      if (tok.isEmpty) return null;
+      return Target(u.host, u.hasPort ? u.port : 7788, tok);
+    }
+    // host:port form
+    final parts = raw.split(':');
+    final host = parts[0];
+    final port = parts.length > 1 ? int.tryParse(parts[1]) ?? 7788 : 7788;
+    final tok = (tokenField ?? '').trim();
+    if (host.isEmpty || tok.isEmpty) return null;
+    return Target(host, port, tok);
+  } catch (_) {
+    return null;
+  }
+}
+
+class ConnectScreen extends StatefulWidget {
+  const ConnectScreen({super.key});
+  @override
+  State<ConnectScreen> createState() => _ConnectScreenState();
+}
+
+class _ConnectScreenState extends State<ConnectScreen> {
+  final _urlCtrl = TextEditingController();
+  final _tokenCtrl = TextEditingController();
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((p) {
+      _urlCtrl.text = p.getString('pair_url') ?? '';
+      _tokenCtrl.text = p.getString('pair_token') ?? '';
+      if (mounted) setState(() {});
+    });
+  }
+
+  Future<void> _connect() async {
+    final t = parseTarget(_urlCtrl.text, tokenField: _tokenCtrl.text);
+    if (t == null) {
+      setState(() => _error = '解析失败：粘贴配对链接（含 ?token=），或填 host:port + token');
+      return;
+    }
+    final p = await SharedPreferences.getInstance();
+    await p.setString('pair_url', _urlCtrl.text.trim());
+    await p.setString('pair_token', t.token);
+    if (!mounted) return;
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => KeyboardScreen(target: t)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFEDEEF2),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Text('MicroToy', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              const Text('连接你的 Host', style: TextStyle(color: Colors.black54)),
+              const SizedBox(height: 24),
+              TextField(
+                controller: _urlCtrl,
+                decoration: const InputDecoration(
+                  labelText: '配对链接（电脑 /pair 二维码里的地址）',
+                  hintText: 'http://192.168.31.248:7788/m?token=…&live=1',
+                  border: OutlineInputBorder(),
+                ),
+                minLines: 1,
+                maxLines: 3,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _tokenCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'token（若链接里没带）',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 10),
+                Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+              ],
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(onPressed: _connect, child: const Text('连接')),
+              ),
+              const SizedBox(height: 12),
+              const Text('手机需与 Host 同一局域网。扫码功能在下个里程碑。',
+                  style: TextStyle(color: Colors.black38, fontSize: 12)),
+            ]),
+          ),
+        ),
+      ),
     );
   }
 }
 
 class KeyboardScreen extends StatefulWidget {
-  const KeyboardScreen({super.key});
+  final Target target;
+  const KeyboardScreen({super.key, required this.target});
   @override
   State<KeyboardScreen> createState() => _KeyboardScreenState();
 }
 
 class _KeyboardScreenState extends State<KeyboardScreen> {
-  final List<SlotState> _slots = const [
-    SlotState(slotId: 0, label: 'my-project', state: AgentState.thinking, canInject: true),
-    SlotState(slotId: 1, label: 'banana-mall', state: AgentState.needsInput, canInject: true),
-    SlotState(slotId: 2, label: 'task-pool', state: AgentState.complete, canInject: false),
-  ];
+  late final LiveClient _client;
+  final _ks = KeySound();
+  List<SlotState> _slots = const [];
   int? _focused;
   String _reasoning = 'MED';
-  String _lcd = "LET'S BUILD — 选一盏灯，按 ◎✓/⊗";
+  String _lcd = 'LIVE · 连接中…';
+  LiveConnection _conn = LiveConnection.connecting;
+
+  @override
+  void initState() {
+    super.initState();
+    _client = LiveClient(host: widget.target.host, port: widget.target.port, token: widget.target.token);
+    _client.slots.listen((s) {
+      final hadNeeds = _slots.any((x) => x.state == AgentState.needsInput);
+      setState(() => _slots = s);
+      final nowNeeds = s.any((x) => x.state == AgentState.needsInput);
+      if (nowNeeds && !hadNeeds) {
+        Haptics.instance.alert();
+        final w = s.firstWhere((x) => x.state == AgentState.needsInput);
+        setState(() => _lcd = '${w.label ?? 'agent ${w.slotId}'} 需要你 — 选中再按 ◎✓/⊗');
+      }
+    });
+    _client.logs.listen((m) => setState(() => _lcd = m));
+    _client.connection.listen((c) => setState(() {
+          _conn = c;
+          if (c == LiveConnection.connected) _lcd = 'LIVE · 已连接';
+          if (c == LiveConnection.disconnected) _lcd = '断线，重连中…（灯保持）';
+        }));
+    _client.connect();
+  }
+
+  @override
+  void dispose() {
+    _client.dispose();
+    super.dispose();
+  }
+
+  SlotState? _slot(int id) {
+    for (final s in _slots) {
+      if (s.slotId == id) return s;
+    }
+    return null;
+  }
 
   void _flash(String t) => setState(() => _lcd = t);
 
@@ -48,28 +210,88 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
           focusedSlot: _focused,
           reasoning: _reasoning,
           lcd: _lcd,
-          connection: LiveConnection.connected,
-          onAgentTap: (id) => setState(() {
-            _focused = id;
-            _lcd = '已选中 agent $id（◎✓/⊗ 只作用于它）';
-          }),
+          connection: _conn,
+          onAgentTap: (id) {
+            _ks.keyUp('agent');
+            Haptics.instance.tap();
+            setState(() => _focused = id);
+            final label = _slot(id)?.label ?? 'agent $id';
+            _flash('已选中 $label（◎✓/⊗ 只作用于它）');
+            _client.sendCommand(SlotCommand.focus, id);
+          },
           onCmd: (a) {
+            _ks.keyUp('cmd');
+            Haptics.instance.press();
+            // 显式聚焦守卫：命令键只作用于选中的 slot，未选中不发（防误注入）
             if ((a == 'accept' || a == 'reject' || a == 'quick') && _focused == null) {
-              _flash('先点一盏 Agent 灯选中它');
+              Haptics.instance.alert();
+              _flash('先点一盏 Agent 灯选中它，再按此键');
               return;
             }
-            _flash('$a → agent $_focused');
+            if (a == 'accept') {
+              _client.sendCommand(SlotCommand.accept, _focused!);
+              Haptics.instance.success();
+              _flash('◎✓ 接受 → agent $_focused');
+            } else if (a == 'reject') {
+              _client.sendCommand(SlotCommand.reject, _focused!);
+              _flash('⊗ 拒绝 → agent $_focused');
+            } else if (a == 'quick') {
+              _client.sendCommand(SlotCommand.quick, _focused!);
+              _flash('⚡ 继续（回车）→ agent $_focused');
+            } else if (a == 'new_session') {
+              _flash('💭 新会话请在电脑开 claude/codex，会自动上灯');
+            } else if (a == 'branch') {
+              _flash('⤴ 分叉是电脑端操作');
+            }
           },
-          onKnob: () => setState(() {
-            const levels = ['LOW', 'MED', 'HIGH', 'XHIGH'];
-            _reasoning = levels[(levels.indexOf(_reasoning) + 1) % levels.length];
-            _lcd = '思考力度 → $_reasoning';
-          }),
-          onJoy: (d) => _flash('摇杆 $d'),
-          onPttStart: () => _flash('🎙 录音中…'),
-          onPttEnd: () => _flash('🎙 语音已发'),
-          onTouch: () => _flash('触摸：嘀（长按切音色）'),
-          onTouchLong: () => _flash('音色切换'),
+          onKnob: () {
+            _ks.knobTick();
+            Haptics.instance.detent();
+            setState(() {
+              const levels = ['LOW', 'MED', 'HIGH', 'XHIGH'];
+              _reasoning = levels[(levels.indexOf(_reasoning) + 1) % levels.length];
+              _lcd = '思考力度显示 $_reasoning（远程只读）';
+            });
+          },
+          onJoy: (dir) {
+            _ks.keyUp('cmd');
+            Haptics.instance.tap();
+            if (dir == 'left' || dir == 'right') {
+              final active = (_slots.map((s) => s.slotId).toList()..sort());
+              if (active.isEmpty) {
+                _flash('暂无活跃 agent');
+                return;
+              }
+              final cur = _focused == null ? -1 : active.indexOf(_focused!);
+              final next = active[(cur + (dir == 'right' ? 1 : active.length - 1) + active.length) % active.length];
+              setState(() => _focused = next);
+              final label = _slot(next)?.label ?? 'agent $next';
+              _flash('焦点 → $label');
+              _client.sendCommand(SlotCommand.focus, next);
+            } else {
+              _flash(dir == 'up' ? '↟ 回到顶部' : '↡ 滚动日志');
+            }
+          },
+          onPttStart: () {
+            _ks.pttStart();
+            Haptics.instance.alert();
+            _flash('🎙 录音中…（语音派活二期）');
+          },
+          onPttEnd: () {
+            _ks.pttStop();
+            Haptics.instance.press();
+          },
+          onTouch: () {
+            _ks.keyUp('touch');
+            Haptics.instance.tap();
+            _flash('触摸：嘀（长按切音色）');
+          },
+          onTouchLong: () async {
+            final next = _ks.profile == 'pom' ? 'pok' : 'pom';
+            await _ks.setProfile(next);
+            Haptics.instance.success();
+            _flash('音色 → ${next == 'pom' ? 'POM 清脆轴' : 'POK 静音轴'}');
+          },
         ),
       ),
     );

@@ -9,7 +9,7 @@
 /// ## Dependency needed for the *playback* half
 ///
 /// Pure Flutter (`dart:*` + the `flutter` SDK) has no built-in API to play
-/// an in-memory PCM/WAV byte buffer with low latency. [_play] below is a
+/// an in-memory PCM/WAV byte buffer with low latency. [_play] uses a
 /// deliberate **no-op placeholder** — it is fully callable (so `analyze`
 /// and this file's tests pass with zero new deps) but does not make sound
 /// yet. To make it actually play, add ONE of:
@@ -32,6 +32,7 @@ library;
 
 import 'dart:math' as math;
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -120,17 +121,53 @@ class KeySound {
   /// Falling chirp marking push-to-talk releasing.
   void pttStop() => _trigger('ptt_stop');
 
+  // Small round-robin pool of players so rapid key-repeats / PTT chatter
+  // overlap instead of cutting each other off. Lazily created; on a platform
+  // without audio bindings (e.g. `dart test`) creation/playback is swallowed.
+  static const int _poolSize = 6;
+  final List<AudioPlayer> _pool = [];
+  int _poolIdx = 0;
+  bool _audioEnabled = true;
+
+  /// Turn actual playback off (leaving synthesis/triggering intact). Set false
+  /// under `flutter test`, where audioplayers' platform channels aren't wired
+  /// and would raise async errors. Production leaves this true.
+  bool playbackEnabled = true;
+
   void _trigger(String soundId) {
     final bytes = _buffers['$_profile:$soundId'];
     if (bytes == null) return; // not (yet) initialized / unknown id — no-op
     _play(bytes);
   }
 
-  /// TODO(playback-backend): wire a real audio player here once a
-  /// dependency is added (see file-level doc comment). Left as a no-op so
-  /// the whole engine is callable/testable without one.
+  /// Play a synthesized WAV buffer via a pooled AudioPlayer. Fire-and-forget;
+  /// any failure (no platform bindings, codec, etc.) disables audio silently
+  /// rather than throwing into a key handler.
   void _play(Uint8List wavBytes) {
-    // Intentionally empty placeholder.
+    if (!_audioEnabled || !playbackEnabled) return;
+    try {
+      if (_pool.isEmpty) {
+        for (var i = 0; i < _poolSize; i++) {
+          _pool.add(AudioPlayer()..setReleaseMode(ReleaseMode.stop));
+        }
+      }
+      final player = _pool[_poolIdx];
+      _poolIdx = (_poolIdx + 1) % _poolSize;
+      // BytesSource plays the in-memory WAV; unawaited on purpose.
+      player.play(BytesSource(wavBytes), mode: PlayerMode.lowLatency).catchError((_) {});
+    } catch (_) {
+      _audioEnabled = false;
+    }
+  }
+
+  /// Release pooled players.
+  Future<void> dispose() async {
+    for (final p in _pool) {
+      try {
+        await p.dispose();
+      } catch (_) {/* ignore */}
+    }
+    _pool.clear();
   }
 
   void _regenerate() {
