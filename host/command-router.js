@@ -94,7 +94,15 @@ export function createCommandRouter({
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      fail(message);
+      // A "not found" / "no such" from the multiplexer means the session's
+      // surface/pane is gone (terminal closed). Drop the dead slot instead of
+      // surfacing a raw "cmux send failed" that reads as an app error.
+      if (/not.?found|no such|unknown (?:surface|pane|session)/i.test(message)) {
+        store.dropSlot?.(request.slotId);
+        emit({ type: 'log', level: 'info', message: `${slot.label ?? '会话'} 已关闭，已从灯位移除` });
+      } else {
+        fail(message);
+      }
     }
   }
 

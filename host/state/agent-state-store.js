@@ -237,5 +237,18 @@ export function createStore({
     }
   }
 
-  return { bindSlot, resolveSession, tmuxTargetForSlot, applyEvent, tick, snapshot };
+  /**
+   * Remove a slot whose underlying session is gone (e.g. its cmux surface /
+   * tmux pane no longer exists — injection returned "not found"). Frees the
+   * slot for a new session and stops the dead one from lingering/misleading.
+   * @param {number} slotId
+   */
+  function dropSlot(slotId) {
+    if (!slots.has(slotId)) return;
+    clearCompleteTimer(slotId);
+    slots.delete(slotId);
+    emitChange();
+  }
+
+  return { bindSlot, resolveSession, tmuxTargetForSlot, dropSlot, applyEvent, tick, snapshot };
 }
