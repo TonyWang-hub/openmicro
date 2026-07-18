@@ -339,9 +339,18 @@ class DeviceKeyboard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF0D1015), Color(0xFF151A21)]),
-        border: Border.all(color: const Color(0xFF262C36)),
-        boxShadow: const [BoxShadow(color: Color(0xB3000000), blurRadius: 8, offset: Offset(0, 2), spreadRadius: -2)],
+        // Warm frosted panel echoing the jelly base — harmonious with the
+        // light plate instead of a hard black screen.
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFBF4EA), Color(0xFFF6E9D7), Color(0xFFFBEFE0)],
+        ),
+        border: Border.all(color: const Color(0xFFEAD9C2)),
+        boxShadow: const [
+          BoxShadow(color: Colors.white, offset: Offset(0, 1), blurRadius: 1),
+          BoxShadow(color: Color(0x1FB07A3C), blurRadius: 8, offset: Offset(0, 2), spreadRadius: -2),
+        ],
       ),
       child: Row(children: [
         if (connection != null) ...[
@@ -352,7 +361,7 @@ class DeviceKeyboard extends StatelessWidget {
           child: Text(lcd,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Color(0xFF8BE9FD), fontSize: 11.5, fontFamily: 'monospace')),
+              style: const TextStyle(color: Color(0xFF5A4632), fontSize: 11.5, fontWeight: FontWeight.w500, fontFamily: 'monospace')),
         ),
       ]),
     );
