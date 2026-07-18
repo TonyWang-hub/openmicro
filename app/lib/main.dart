@@ -75,8 +75,21 @@ class _ConnectScreenState extends State<ConnectScreen> {
   @override
   void initState() {
     super.initState();
+    // Test/dev shortcut: `--dart-define=PAIR_URL=...` auto-connects on launch
+    // (handy on a simulator where typing the pairing URL is painful).
+    const injected = String.fromEnvironment('PAIR_URL');
+    if (injected.isNotEmpty) {
+      final t = parseTarget(injected);
+      if (t != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            Navigator.of(context).push(MaterialPageRoute(builder: (_) => KeyboardScreen(target: t)));
+          }
+        });
+      }
+    }
     SharedPreferences.getInstance().then((p) {
-      _urlCtrl.text = p.getString('pair_url') ?? '';
+      _urlCtrl.text = p.getString('pair_url') ?? injected;
       _tokenCtrl.text = p.getString('pair_token') ?? '';
       if (mounted) setState(() {});
     });
