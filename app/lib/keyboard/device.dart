@@ -387,17 +387,16 @@ class _KeyFace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
+    // The key face fills its box; focus is shown by an outer gradient ring that
+    // keeps the same 64px footprint (no layout shift), replacing the old hard
+    // black border with a warm→cool gradient + soft glow.
+    final inner = AnimatedContainer(
       duration: const Duration(milliseconds: 70),
       transform: Matrix4.translationValues(0, pressed ? 4 : 0, 0),
-      width: DeviceKeyboard._keySize,
-      height: DeviceKeyboard._keySize,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(focused ? 13 : 15),
         color: color,
-        border: focused
-            ? Border.all(color: const Color(0xFF1F2937), width: 3)
-            : Border.all(color: translucent ? Colors.white.withValues(alpha: 0.75) : const Color(0xFFD5D9DE)),
+        border: Border.all(color: translucent ? Colors.white.withValues(alpha: 0.75) : const Color(0xFFD5D9DE)),
         boxShadow: [
           BoxShadow(color: const Color(0xFFC7CCD2), offset: Offset(0, pressed ? 2 : 6)),
           BoxShadow(color: const Color(0x33000000), blurRadius: pressed ? 4 : 9, offset: Offset(0, pressed ? 3 : 9)),
@@ -406,6 +405,24 @@ class _KeyFace extends StatelessWidget {
       ),
       alignment: Alignment.center,
       child: child,
+    );
+    if (!focused) {
+      return SizedBox(width: DeviceKeyboard._keySize, height: DeviceKeyboard._keySize, child: inner);
+    }
+    return Container(
+      width: DeviceKeyboard._keySize,
+      height: DeviceKeyboard._keySize,
+      padding: const EdgeInsets.all(2.5),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(15),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFC46B), Color(0xFFF78BB6), Color(0xFF9B8CFF)],
+        ),
+        boxShadow: const [BoxShadow(color: Color(0x80F78BB6), blurRadius: 12, spreadRadius: 1)],
+      ),
+      child: inner,
     );
   }
 }
