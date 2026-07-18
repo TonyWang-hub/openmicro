@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import '../model/slot.dart';
 
-/// The skeuomorphic Codex-Micro-style keyboard. Ported from the web toy v6:
-/// square 4×4 layout, jelly base, whole-key RGB glow per state, key travel,
-/// explicit focus ring. Pure presentation + callbacks — no networking here.
+/// The skeuomorphic Codex-Micro-style keyboard. Ported from the web toy v6
+/// with the polish pass: real key-press travel (down + rebound), ✛ axis drawn
+/// (not a font glyph), corner screws, side etch text, embedded OLED LCD.
 class DeviceKeyboard extends StatelessWidget {
-  final List<SlotState> slots; // up to 6 agent slots
+  final List<SlotState> slots;
   final int? focusedSlot;
-  final String reasoning; // LOW/MED/HIGH/XHIGH
+  final String reasoning;
   final String lcd;
-  final LiveConnection? connection; // null in demo mode
+  final LiveConnection? connection;
   final void Function(int slotId) onAgentTap;
-  final void Function(String action) onCmd; // quick/accept/reject/branch/new_session
+  final void Function(String action) onCmd;
   final VoidCallback onKnob;
-  final void Function(String dir) onJoy; // left/right/up/down
+  final void Function(String dir) onJoy;
   final VoidCallback onPttStart;
   final VoidCallback onPttEnd;
   final VoidCallback onTouch;
@@ -36,24 +36,24 @@ class DeviceKeyboard extends StatelessWidget {
     required this.onTouchLong,
   });
 
-  static const _idle = Color(0xFFF5F5F5);
-  static const _thinking = Color(0xFF7C9BF5);
-  static const _complete = Color(0xFF7ED9A2);
-  static const _needs = Color(0xFFFFC456);
-  static const _error = Color(0xFFF78BB6);
+  static const idle = Color(0xFFF5F5F5);
+  static const thinking = Color(0xFF7C9BF5);
+  static const complete = Color(0xFF7ED9A2);
+  static const needs = Color(0xFFFFC456);
+  static const error = Color(0xFFF78BB6);
 
-  Color _stateColor(AgentState s) {
+  static Color stateColor(AgentState s) {
     switch (s) {
       case AgentState.thinking:
-        return _thinking;
+        return thinking;
       case AgentState.complete:
-        return _complete;
+        return complete;
       case AgentState.needsInput:
-        return _needs;
+        return needs;
       case AgentState.error:
-        return _error;
+        return error;
       default:
-        return _idle;
+        return idle;
     }
   }
 
@@ -70,9 +70,8 @@ class DeviceKeyboard extends StatelessWidget {
       color: const Color(0xFFEDEEF2),
       alignment: Alignment.center,
       child: LayoutBuilder(builder: (ctx, box) {
-        // Device designed at 360 logical px wide; scale to fill width.
         const designW = 360.0;
-        final scale = (box.maxWidth / designW).clamp(0.5, 1.4);
+        final scale = (box.maxWidth / designW).clamp(0.5, 1.5);
         return Transform.scale(
           scale: scale,
           child: SizedBox(width: designW, child: _jelly(context)),
@@ -85,32 +84,46 @@ class DeviceKeyboard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(40),
+        borderRadius: BorderRadius.circular(42),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xE6FCD9B8), Color(0xE6F7C9A5), Color(0xE6FBE3CD)],
+          colors: [Color(0xF2FCD9B8), Color(0xF2F7C9A5), Color(0xF2FBE3CD)],
         ),
         boxShadow: const [
-          BoxShadow(color: Color(0x66D88C50), blurRadius: 40, offset: Offset(0, 20)),
+          BoxShadow(color: Color(0xBBEDB287), offset: Offset(0, 4)),
+          BoxShadow(color: Color(0x61D88C50), blurRadius: 34, offset: Offset(0, 14)),
+          BoxShadow(color: Color(0x38D88C50), blurRadius: 60, offset: Offset(0, 30)),
         ],
       ),
       child: Container(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(26),
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [Color(0xFFF0F2F4), Color(0xFFDCDFE4)],
           ),
+          boxShadow: const [
+            BoxShadow(color: Colors.white, offset: Offset(0, 2), blurRadius: 3),
+            BoxShadow(color: Color(0x1F000000), offset: Offset(0, 8), blurRadius: 14),
+          ],
         ),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          _legend(),
-          const SizedBox(height: 8),
-          _grid(),
-          const SizedBox(height: 10),
-          _lcd(),
+        child: Stack(children: [
+          // corner screws + etch text overlaid on the plate
+          const Positioned(top: 2, left: 2, child: _Screw()),
+          const Positioned(top: 2, right: 2, child: _Screw()),
+          const Positioned(bottom: 2, left: 2, child: _Screw()),
+          const Positioned(bottom: 2, right: 2, child: _Screw()),
+          Column(mainAxisSize: MainAxisSize.min, children: [
+            const _TopMark(),
+            _legend(),
+            const SizedBox(height: 6),
+            _grid(),
+            const SizedBox(height: 10),
+            _lcd(),
+          ]),
         ]),
       ),
     );
@@ -118,147 +131,143 @@ class DeviceKeyboard extends StatelessWidget {
 
   Widget _legend() {
     Widget dot(Color c, String t) => Row(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
+          Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                  color: c,
+                  shape: BoxShape.circle,
+                  border: c == idle ? Border.all(color: const Color(0xFFC9CED5)) : null)),
           const SizedBox(width: 3),
           Text(t, style: const TextStyle(fontSize: 8, color: Color(0xFF8A919B), letterSpacing: 0.5)),
         ]);
-    return Wrap(spacing: 8, runSpacing: 2, alignment: WrapAlignment.center, children: [
-      dot(_idle, 'IDLE'),
-      dot(_thinking, 'THINKING'),
-      dot(_complete, 'COMPLETE'),
-      dot(_needs, 'NEEDS'),
-      dot(_error, 'ERROR'),
+    return Wrap(spacing: 9, runSpacing: 2, alignment: WrapAlignment.center, children: [
+      dot(idle, 'IDLE'),
+      dot(thinking, 'THINKING'),
+      dot(complete, 'COMPLETE'),
+      dot(needs, 'NEEDS'),
+      dot(error, 'ERROR'),
     ]);
   }
 
+  static const _gap = 8.0;
+
   Widget _grid() {
-    const gap = 8.0;
     return Column(children: [
       Row(children: [
-        _knob(), const SizedBox(width: gap),
-        _agent(0), const SizedBox(width: gap),
-        _agent(1), const SizedBox(width: gap),
+        _knob(), const SizedBox(width: _gap),
+        _agent(0), const SizedBox(width: _gap),
+        _agent(1), const SizedBox(width: _gap),
         _joy(),
       ]),
-      const SizedBox(height: gap),
+      const SizedBox(height: _gap),
       Row(children: [
-        _agent(2), const SizedBox(width: gap),
-        _agent(3), const SizedBox(width: gap),
-        _agent(4), const SizedBox(width: gap),
+        _agent(2), const SizedBox(width: _gap),
+        _agent(3), const SizedBox(width: _gap),
+        _agent(4), const SizedBox(width: _gap),
         _agent(5),
       ]),
-      const SizedBox(height: gap),
+      const SizedBox(height: _gap),
       Row(children: [
-        _cmd('quick', '⚡'), const SizedBox(width: gap),
-        _cmd('accept', '◎✓'), const SizedBox(width: gap),
-        _cmd('reject', '⊗'), const SizedBox(width: gap),
-        _cmd('branch', '⤴'),
+        _cmd('quick', const Icon(Icons.bolt, color: Color(0xFFF5A623), size: 26)), const SizedBox(width: _gap),
+        _cmd('accept', const _AcceptGlyph()), const SizedBox(width: _gap),
+        _cmd('reject', const Icon(Icons.cancel_outlined, color: Color(0xFF3A3F47), size: 24)), const SizedBox(width: _gap),
+        _cmd('branch', const Icon(Icons.turn_right, color: Color(0xFF3A3F47), size: 24)),
       ]),
-      const SizedBox(height: gap),
+      const SizedBox(height: _gap),
       Row(children: [
-        _touch(), const SizedBox(width: gap),
-        _mic(), const SizedBox(width: gap),
-        _cmd('new_session', '💭'),
+        _touch(), const SizedBox(width: _gap),
+        _mic(), const SizedBox(width: _gap),
+        _cmd('new_session', const Icon(Icons.mode_comment_outlined, color: Color(0xFF3A3F47), size: 22)),
       ]),
     ]);
   }
 
   static const _keySize = 64.0;
 
-  Widget _keyShell({required Widget child, required Color topColor, Color? glow, bool focused = false}) {
-    return Container(
-      width: _keySize,
-      height: _keySize,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: topColor,
-        border: focused ? Border.all(color: const Color(0xFF1F2937), width: 3) : Border.all(color: const Color(0xFFD5D9DE)),
-        boxShadow: [
-          const BoxShadow(color: Color(0xFFC7CCD2), offset: Offset(0, 5)),
-          if (glow != null) BoxShadow(color: glow, blurRadius: 20, spreadRadius: 1),
-        ],
-      ),
-      alignment: Alignment.center,
-      child: child,
-    );
-  }
-
   Widget _agent(int id) {
     final slot = _slot(id);
     final st = slot?.state ?? AgentState.idle;
     final active = st != AgentState.idle && st != AgentState.unknown;
-    final c = _stateColor(st);
-    return GestureDetector(
+    final c = stateColor(st);
+    return _PressableKey(
       onTap: () => onAgentTap(id),
-      child: _keyShell(
+      pulse: st == AgentState.needsInput,
+      builder: (pressed) => _KeyFace(
+        pressed: pressed,
         focused: focusedSlot == id,
-        topColor: active ? c.withValues(alpha: 0.78) : Colors.white.withValues(alpha: 0.42),
+        color: active ? c.withValues(alpha: 0.80) : Colors.white.withValues(alpha: 0.42),
         glow: active ? c : null,
-        child: Container(
-          width: 26,
-          height: 26,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(6),
-            color: active ? Colors.white.withValues(alpha: 0.25) : Colors.white.withValues(alpha: 0.55),
-          ),
-          alignment: Alignment.center,
-          child: Text('✛', style: TextStyle(color: active ? Colors.white : const Color(0xFF9AA4B5), fontSize: 13)),
-        ),
+        translucent: !active,
+        child: _AxisCross(active: active),
       ),
     );
   }
 
-  Widget _cmd(String action, String glyph) {
-    return GestureDetector(
+  Widget _cmd(String action, Widget glyph) {
+    return _PressableKey(
       onTap: () => onCmd(action),
-      child: _keyShell(
-        topColor: Colors.white,
-        child: Text(glyph, style: const TextStyle(fontSize: 22, color: Color(0xFF3A3F47))),
-      ),
+      builder: (pressed) => _KeyFace(pressed: pressed, color: Colors.white, child: glyph),
     );
   }
 
   Widget _knob() {
-    return GestureDetector(
+    return _PressableKey(
       onTap: onKnob,
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(
-          width: _keySize, height: _keySize - 12,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: SweepGradient(colors: [Color(0xFFFFFFFF), Color(0xFFD5D8DD), Color(0xFFF2F4F6), Color(0xFFE0E3E8)]),
-            boxShadow: [BoxShadow(color: Color(0x3D000000), blurRadius: 10, offset: Offset(0, 6))],
+      builder: (pressed) => Column(mainAxisSize: MainAxisSize.min, children: [
+        Transform.translate(
+          offset: Offset(0, pressed ? 2 : 0),
+          child: Container(
+            width: _keySize,
+            height: _keySize - 12,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const SweepGradient(
+                  startAngle: 3.6,
+                  colors: [Color(0xFFFFFFFF), Color(0xFFD5D8DD), Color(0xFFF2F4F6), Color(0xFFE0E3E8), Color(0xFFFFFFFF)]),
+              border: Border.all(color: const Color(0xFFC3C7CD)),
+              boxShadow: [BoxShadow(color: const Color(0x3D000000), blurRadius: pressed ? 5 : 10, offset: Offset(0, pressed ? 3 : 6))],
+            ),
+            alignment: Alignment.topCenter,
+            child: Container(
+                margin: const EdgeInsets.only(top: 6),
+                width: 4,
+                height: 16,
+                decoration: BoxDecoration(color: const Color(0xFFC4C8CF), borderRadius: BorderRadius.circular(2))),
           ),
-          alignment: Alignment.topCenter,
-          child: Container(margin: const EdgeInsets.only(top: 5), width: 4, height: 16, color: const Color(0xFFC4C8CF)),
         ),
-        Text(reasoning, style: const TextStyle(fontSize: 7, color: Color(0xFF6B7280))),
+        const SizedBox(height: 2),
+        Text('REASONING · $reasoning',
+            style: const TextStyle(fontSize: 6.5, color: Color(0xFF6B7280), letterSpacing: 0.5)),
       ]),
     );
   }
 
   Widget _joy() {
-    return GestureDetector(
-      onTapUp: (d) {
-        // Quadrant → direction, based on tap position within the cap.
-        final local = d.localPosition;
+    return _PressableKey(
+      onTapAt: (local) {
         final dx = local.dx - _keySize / 2;
         final dy = local.dy - _keySize / 2;
-        final horizontal = dx.abs() > dy.abs();
-        onJoy(horizontal ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+        onJoy(dx.abs() > dy.abs() ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
       },
-      child: Container(
-        width: _keySize, height: _keySize,
+      builder: (pressed) => Container(
+        width: _keySize,
+        height: _keySize,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFF9AA0A8), width: 2, style: BorderStyle.solid),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFF9AA0A8), width: 2),
         ),
         alignment: Alignment.center,
-        child: Container(
-          width: 46, height: 46,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: RadialGradient(center: Alignment(-0.3, -0.4), colors: [Color(0xFF464A51), Color(0xFF101216)]),
+        child: Transform.scale(
+          scale: pressed ? 0.94 : 1,
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(center: Alignment(-0.3, -0.4), colors: [Color(0xFF464A51), Color(0xFF101216)]),
+              boxShadow: [BoxShadow(color: Color(0x59000000), blurRadius: 10, offset: Offset(0, 6))],
+            ),
           ),
         ),
       ),
@@ -266,38 +275,44 @@ class DeviceKeyboard extends StatelessWidget {
   }
 
   Widget _mic() {
-    return GestureDetector(
-      onTapDown: (_) => onPttStart(),
-      onTapUp: (_) => onPttEnd(),
-      onTapCancel: onPttEnd,
-      child: Container(
-        width: _keySize * 2 + 8, height: _keySize,
+    return _HoldKey(
+      onStart: onPttStart,
+      onEnd: onPttEnd,
+      builder: (pressed) => Container(
+        width: _keySize * 2 + _gap,
+        height: _keySize,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           color: Colors.white,
-          border: Border.all(color: const Color(0xFFD5D9DE)),
-          boxShadow: const [BoxShadow(color: Color(0xFFC7CCD2), offset: Offset(0, 5))],
+          border: Border.all(color: pressed ? error : const Color(0xFFD5D9DE), width: pressed ? 2 : 1),
+          boxShadow: [
+            BoxShadow(color: const Color(0xFFC7CCD2), offset: Offset(0, pressed ? 2 : 6)),
+            if (pressed) const BoxShadow(color: error, blurRadius: 22, spreadRadius: 1),
+          ],
         ),
         alignment: Alignment.center,
-        child: const Text('🎙', style: TextStyle(fontSize: 22)),
+        child: const Icon(Icons.mic, color: Color(0xFF3A3F47), size: 26),
       ),
     );
   }
 
   Widget _touch() {
-    return GestureDetector(
+    return _PressableKey(
       onTap: onTouch,
       onLongPress: onTouchLong,
-      child: SizedBox(
+      travel: false,
+      builder: (pressed) => SizedBox(
         width: _keySize,
         height: _keySize,
         child: Align(
           alignment: Alignment.bottomLeft,
           child: Container(
-            width: 34, height: 34,
-            decoration: const BoxDecoration(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: RadialGradient(center: Alignment(-0.3, -0.4), colors: [Color(0xFF33363B), Color(0xFF0C0E11)]),
+              gradient: const RadialGradient(center: Alignment(-0.3, -0.4), colors: [Color(0xFF33363B), Color(0xFF0C0E11)]),
+              boxShadow: [BoxShadow(color: const Color(0x59000000), blurRadius: pressed ? 3 : 7, offset: const Offset(0, 2))],
             ),
           ),
         ),
@@ -309,11 +324,11 @@ class DeviceKeyboard extends StatelessWidget {
     Color connColor() {
       switch (connection) {
         case LiveConnection.connected:
-          return _complete;
+          return complete;
         case LiveConnection.connecting:
-          return _needs;
+          return needs;
         case LiveConnection.disconnected:
-          return _error;
+          return error;
         default:
           return Colors.transparent;
       }
@@ -321,24 +336,218 @@ class DeviceKeyboard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        gradient: const LinearGradient(colors: [Color(0xFF0D1015), Color(0xFF151A21)]),
+        gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF0D1015), Color(0xFF151A21)]),
         border: Border.all(color: const Color(0xFF262C36)),
+        boxShadow: const [BoxShadow(color: Color(0xB3000000), blurRadius: 8, offset: Offset(0, 2), spreadRadius: -2)],
       ),
       child: Row(children: [
         if (connection != null) ...[
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: connColor(), shape: BoxShape.circle)),
+          Container(width: 8, height: 8, decoration: BoxDecoration(color: connColor(), shape: BoxShape.circle, boxShadow: [BoxShadow(color: connColor(), blurRadius: 6)])),
           const SizedBox(width: 8),
         ],
         Expanded(
           child: Text(lcd,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Color(0xFF8BE9FD), fontSize: 11, fontFamily: 'monospace')),
+              style: const TextStyle(color: Color(0xFF8BE9FD), fontSize: 11.5, fontFamily: 'monospace')),
         ),
       ]),
+    );
+  }
+}
+
+/// A key face with the pressed-down travel + shadow, focus ring, glow.
+class _KeyFace extends StatelessWidget {
+  final bool pressed;
+  final bool focused;
+  final Color color;
+  final Color? glow;
+  final bool translucent;
+  final Widget child;
+  const _KeyFace({
+    required this.pressed,
+    this.focused = false,
+    required this.color,
+    this.glow,
+    this.translucent = false,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 70),
+      transform: Matrix4.translationValues(0, pressed ? 4 : 0, 0),
+      width: DeviceKeyboard._keySize,
+      height: DeviceKeyboard._keySize,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(15),
+        color: color,
+        border: focused
+            ? Border.all(color: const Color(0xFF1F2937), width: 3)
+            : Border.all(color: translucent ? Colors.white.withValues(alpha: 0.75) : const Color(0xFFD5D9DE)),
+        boxShadow: [
+          BoxShadow(color: const Color(0xFFC7CCD2), offset: Offset(0, pressed ? 2 : 6)),
+          BoxShadow(color: const Color(0x33000000), blurRadius: pressed ? 4 : 9, offset: Offset(0, pressed ? 3 : 9)),
+          if (glow != null) BoxShadow(color: glow!, blurRadius: 22, spreadRadius: 1),
+        ],
+      ),
+      alignment: Alignment.center,
+      child: child,
+    );
+  }
+}
+
+/// Drawn ✛ axis cross (font glyphs like U+271B don't render on iOS).
+class _AxisCross extends StatelessWidget {
+  final bool active;
+  const _AxisCross({required this.active});
+  @override
+  Widget build(BuildContext context) {
+    final sw = active ? Colors.white.withValues(alpha: 0.25) : Colors.white.withValues(alpha: 0.55);
+    final arm = active ? Colors.white.withValues(alpha: 0.9) : const Color(0xFF9AA4B5);
+    return Container(
+      width: 30,
+      height: 30,
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(6), color: sw),
+      alignment: Alignment.center,
+      child: SizedBox(
+        width: 15,
+        height: 15,
+        child: Stack(alignment: Alignment.center, children: [
+          Container(width: 15, height: 2.4, color: arm),
+          Container(width: 2.4, height: 15, color: arm),
+        ]),
+      ),
+    );
+  }
+}
+
+/// The ◎✓ accept glyph, composed reliably from icons.
+class _AcceptGlyph extends StatelessWidget {
+  const _AcceptGlyph();
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 30,
+      height: 26,
+      child: Stack(alignment: Alignment.center, children: [
+        Icon(Icons.circle_outlined, color: Color(0xFF3A3F47), size: 24),
+        Icon(Icons.check, color: Color(0xFF3A3F47), size: 15),
+      ]),
+    );
+  }
+}
+
+class _Screw extends StatelessWidget {
+  const _Screw();
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 14,
+      height: 14,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(center: Alignment(-0.3, -0.4), colors: [Color(0xFF4A4D52), Color(0xFF17191D)]),
+      ),
+      alignment: Alignment.center,
+      child: Container(width: 8, height: 2, color: const Color(0xFF0A0B0D)),
+    );
+  }
+}
+
+
+class _TopMark extends StatelessWidget {
+  const _TopMark();
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.only(bottom: 2),
+      child: Icon(Icons.arrow_upward, size: 12, color: Color(0xFF99A0A9)),
+    );
+  }
+}
+
+/// A tappable key with press-down travel + rebound. `builder(pressed)` renders
+/// the face for the current pressed state. `travel:false` disables the visual
+/// offset (used by the flush touch sensor).
+class _PressableKey extends StatefulWidget {
+  final Widget Function(bool pressed) builder;
+  final VoidCallback? onTap;
+  final void Function(Offset local)? onTapAt;
+  final VoidCallback? onLongPress;
+  final bool pulse;
+  final bool travel;
+  const _PressableKey({
+    required this.builder,
+    this.onTap,
+    this.onTapAt,
+    this.onLongPress,
+    this.pulse = false,
+    this.travel = true,
+  });
+  @override
+  State<_PressableKey> createState() => _PressableKeyState();
+}
+
+class _PressableKeyState extends State<_PressableKey> {
+  bool _pressed = false;
+  void _set(bool v) {
+    if (widget.travel && mounted) setState(() => _pressed = v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => _set(true),
+      onTapUp: (d) {
+        _set(false);
+        widget.onTap?.call();
+        widget.onTapAt?.call(d.localPosition);
+      },
+      onTapCancel: () => _set(false),
+      onLongPress: widget.onLongPress,
+      child: widget.builder(_pressed),
+    );
+  }
+}
+
+/// A press-and-hold key (PTT): pressed while the finger is down.
+class _HoldKey extends StatefulWidget {
+  final Widget Function(bool pressed) builder;
+  final VoidCallback onStart;
+  final VoidCallback onEnd;
+  const _HoldKey({required this.builder, required this.onStart, required this.onEnd});
+  @override
+  State<_HoldKey> createState() => _HoldKeyState();
+}
+
+class _HoldKeyState extends State<_HoldKey> {
+  bool _held = false;
+  void _start() {
+    if (_held) return;
+    setState(() => _held = true);
+    widget.onStart();
+  }
+
+  void _end() {
+    if (!_held) return;
+    setState(() => _held = false);
+    widget.onEnd();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => _start(),
+      onTapUp: (_) => _end(),
+      onTapCancel: _end,
+      child: widget.builder(_held),
     );
   }
 }
