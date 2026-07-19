@@ -35,16 +35,65 @@ Codex Micro（OpenAI × Work Louder $230 限量实体宏键盘）的软件模拟
 4. **桌面布局**：左虚拟键盘 + 右真终端（xterm.js，开源），每 agent 会话一个 tab
 5. **外观**：v6 定稿
 
-## 待拍板
+## 玩具双模式（2026-07-17 定位拍板：手机 1:1 拟物玩具，Spec `docs/specs/2026-07-17-toy-demo-live-design.md`）
 
-- 接线技术方案：A pty 直连 / B tmux 托管（生态验证：amux/Tactic/agent-dashboard 均此路线，可接管已有会话、server 崩会话不死）/ C 结构化事件（Codex app-server JSON-RPC 复用 companion bridge + Claude Code Agent SDK）/ B+C 混合（推荐：tmux 主干 + hooks/notify 官方事件驱动灯效）
-- 布局高保真稿观感确认
+```bash
+# Demo 模式（零配置，6 个假 agent 演戏 + 音效震动）：手机/浏览器开
+#   http://127.0.0.1:7788/m
+# Live 模式（灯接你的真 agent）：
+#   CMS_HOST=0.0.0.0 CMS_TOKEN=你的token npm start
+#   电脑开 http://127.0.0.1:7788/pair 出二维码 → 手机扫码进
+```
+
+- 音色切换：**长按键盘上的黑色触摸圆钮**（POM 清脆轴 / POK 静音轴），localStorage 记忆
+- Live 审批注入默认：claude-code `accept:['1'] reject:['Escape']` / codex `accept:['y'] reject:['Escape']`——**已于 2026-07-17 对真实 TUI 实测校准**（claude 权限对话按 1 接受、Esc 取消；codex 审批对话 `y` 热键接受、Esc 拒绝，均端到端验证文件真的写/未写）。`CMS_KEYMAP` JSON 可覆盖
+- ⚠️ 对外发布前必须改名（Tactic Remote 被要求改名的前科；"Codex Micro" 是对方产品名）
+
+## 全局 hooks（自动跟踪所有 claude/codex，2026-07-18，Spec `docs/specs/2026-07-18-auto-slot-assignment.md`）
+
+装一次全局 hooks，之后任何目录新开的 claude/codex 自动占一盏灯、按项目名（cwd）标注、超 6 个 LRU 回收。手机开 `/m?token=<token>&live=1`。
+
+**安装**：把 `scripts/cms-hook-forward.sh`（绝对路径）作为 `command` append 到 `~/.claude/settings.json` 的 `UserPromptSubmit`/`PreToolUse`/`Stop`/`Notification` 四个 hook 事件（每条前缀 `CMS_HOOK_AGENT=claude-code`）。**append，不要覆盖已有 hooks**。
+
+**卸载**（记一下）：
+1. 编辑 `~/.claude/settings.json`，删掉 4 处含 `cms-hook-forward` 的 hook 组（其余 hooks 不动）；或直接恢复安装时的备份 `~/.claude/settings.json.bak-<时间戳>`。
+2. 删完 claude 立即回原样，**零残留**。
+3. 即使不卸载：Host 没开着时转发脚本永远 `exit 0`、~6ms 返回、无任何报错噪音（fire-and-forget 已硬化），对正常用 claude 零影响。
+
+**远程按键支持 tmux 和 cmux**：会话跑在 **tmux**（`tmux send-keys`）或 **cmux**（`cmux send`/`send-key --surface`，自动读 `$CMUX_PANEL_ID` 定位）里都能远程按 ✓/✕；两者都不在则只能看灯。cmux 键名：可打印字符走 `send`、命名键（escape/enter）走 `send-key`。cmux CLI 路径可用 `CMS_CMUX_BIN` 覆盖（默认 PATH 的 `cmux`，回退 `/Applications/cmux.app/.../cmux`）。
 
 ## 状态
 
-设计阶段（brainstorming 进行中）。spec 定稿后落 `docs/specs/`。
+MVP 接线（B+C：tmux + 官方事件灯效）已落地（Spec：`docs/specs/2026-07-17-wiring-b-plus-c.md`）。玩具 Demo/Live 双模式已实现并自动化验证（93 tests + 端到端：注入 Notification → 手机键盘黄灯亮 → 按 ✓ → 键序注入真实 tmux）。Live keymap 已对真实 Claude Code + Codex TUI 实测校准。待真机验收：手机上的音效/震动手感。
 
 ## 相关
 
 - 知识库调研：my-project `internal-research`（开源同类：amux / CloudCLI UI / agent-dashboard / Tactic Remote）
 - 同源项目：my-project `notes/internal-project/`（mvp/bridge 已实现 codex app-server 事件流 + codex exec 兜底，本项目候选复用件）
+
+## 启动
+
+```bash
+npm install
+npm start
+```
+
+浏览器打开 [http://127.0.0.1:7788](http://127.0.0.1:7788)。
+
+- **默认只监听本机 loopback**（`127.0.0.1`），局域网不可达——MVP 用 loopback 代替完整鉴权。
+- 端口：`CMS_PORT`（默认 `7788`）
+- 绑定地址：`CMS_HOST`（默认 `127.0.0.1`；若需对外监听可设 `0.0.0.0`，自行承担暴露风险）
+
+## 装 hooks
+
+灯效依赖 Claude Code / Codex 官方 hooks 转发事件到 Host。**不会自动改你的配置**，请按 [scripts/install-hooks.md](scripts/install-hooks.md) 手动安装并信任 hook 命令。
+
+## MVP 验收（Spec §6.2）
+
+1. 双 agent 同时在线，右侧终端可读可输入
+2. 杀 Host 再起，原 tmux session 可 reattach，对话不丢
+3. ✓ / ✕ / 新建 对当前槽生效（键序以 `config.keymap` 为准）
+4. 人为断开 hooks 后，灯**不**随 pane 文本变色（负面回归；自动化见 `host/state/no-pane-inference.test.js`）
+5. Claude Code：可见路径 `thinking` / `needs_input` / `complete`→`idle`
+6. Codex hooks：同上；legacy notify 至少验证 `complete`；打开 app-server 后 `awaiting_approval`→黄灯
+7. 双槽不串：错 `sessionKey` 的事件被丢弃

@@ -1,0 +1,80 @@
+/**
+ * @typedef {import('../types.js').AgentLightEvent} AgentLightEvent
+ * @typedef {import('../types.js').LightState} LightState
+ * @typedef {import('../types.js').EventSource} EventSource
+ */
+
+import { normalizeHookFields } from './normalize-hook.js';
+
+/**
+ * @typedef {object} SlotBinding
+ * @property {number} slotId
+ * @property {'claude-code'|'codex'} agent
+ * @property {string} sessionKey
+ */
+
+/**
+ * @typedef {object} ClaudeHookRaw
+ * @property {string} [hookEventName]
+ * @property {string} [hook_event_name]
+ * @property {string} [notificationType]
+ * @property {string} [notification_type]
+ */
+
+/** @type {Record<string, LightState>} */
+const HOOK_STATE = {
+  SessionStart: 'idle',
+  SessionEnd: 'idle',
+  UserPromptSubmit: 'thinking',
+  PreToolUse: 'thinking',
+  Stop: 'complete',
+  StopFailure: 'error',
+};
+
+/**
+ * @param {string | undefined} notificationType
+ * @returns {LightState | null}
+ */
+function mapNotificationType(notificationType) {
+  // A Notification hook fires exactly when Claude wants the user's attention
+  // (permission request / idle prompt / elicitation). Real-world payload field
+  // values vary by CLI version, so default to needs_input for anything that
+  // is not an explicit completion — a dropped notification means the yellow
+  // light never turns on, which is the worst failure mode for this device.
+  if (notificationType === 'agent_completed') return 'complete';
+  return 'needs_input';
+}
+
+/**
+ * @param {SlotBinding} binding
+ * @param {LightState} state
+ * @returns {AgentLightEvent}
+ */
+function toLightEvent(binding, state) {
+  return {
+    v: 1,
+    slotId: binding.slotId,
+    agent: binding.agent,
+    sessionKey: binding.sessionKey,
+    state,
+    ts: new Date().toISOString(),
+    source: 'cc-hooks',
+  };
+}
+
+/**
+ * @param {ClaudeHookRaw} raw
+ * @param {SlotBinding} binding
+ * @returns {AgentLightEvent | null}
+ */
+export function mapClaudeHook(raw, binding) {
+  const { hookEventName, notificationType } = normalizeHookFields(raw);
+
+  if (hookEventName === 'Notification') {
+    const state = mapNotificationType(notificationType);
+    return state ? toLightEvent(binding, state) : null;
+  }
+
+  const state = hookEventName ? HOOK_STATE[hookEventName] : undefined;
+  return state ? toLightEvent(binding, state) : null;
+}

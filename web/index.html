@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Codex Micro Sim</title>
+  <link rel="stylesheet" href="/vendor/xterm/css/xterm.css" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="win">
+    <div class="titlebar">
+      <i class="dot red"></i><i class="dot yellow"></i><i class="dot green"></i>
+      <span class="name">Codex Micro Sim</span>
+      <span id="connStatus" class="conn disconnected">● disconnected</span>
+    </div>
+    <div class="body">
+      <aside class="left" id="keyboardRoot"></aside>
+      <section class="right">
+        <div class="tabs" id="tabs"></div>
+        <div class="term-host" id="termHost"></div>
+        <div class="status-bar">
+          <span>slot <b id="statusSlot">—</b></span>
+          <span>agent <b id="statusAgent">—</b></span>
+          <span>state <b id="statusState">—</b></span>
+          <span class="spacer"></span>
+          <span id="statusHint">lights ← WS state only</span>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="/vendor/xterm/lib/xterm.js"></script>
+  <script src="/vendor/addon-fit/lib/addon-fit.js"></script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

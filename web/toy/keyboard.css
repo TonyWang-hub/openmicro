@@ -1,0 +1,384 @@
+/*
+ * 1:1 toy keyboard — ported from docs/design/simulator-v6-mockup.html (v6 定稿)
+ * against the device reference.
+ * Device is laid out at a fixed 540px design width; .toy-scale gets a
+ * JS-computed --scale so the machine fills the phone width losslessly.
+ * Light states: a-idle | a-thinking | a-complete | a-needs_input | a-error
+ * (idle is the visual default — unknown/grey is banned by spec §4).
+ */
+
+.toy-stage {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at 50% 20%, #fafafa, #e7e8ec 75%);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+  overflow: hidden;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.toy-scale {
+  transform: scale(var(--scale, 1));
+  transform-origin: center center;
+  width: 540px;
+  flex-shrink: 0;
+}
+
+.toy-jelly {
+  background: linear-gradient(150deg, #fcd9b8e6, #f7c9a5e6 45%, #fbe3cde6);
+  border-radius: 46px;
+  padding: 27px;
+  box-shadow:
+    0 4px 0 #edb287bb,
+    0 14px 34px rgba(216, 140, 80, 0.38),
+    0 30px 60px rgba(216, 140, 80, 0.22);
+  position: relative;
+}
+.toy-plate {
+  background: linear-gradient(160deg, #f0f2f4, #dcdfe4);
+  border-radius: 28px;
+  padding: 16px 42px 20px;
+  position: relative;
+  box-shadow:
+    inset 0 2px 3px #fff,
+    inset 0 -3px 8px rgba(0, 0, 0, 0.09),
+    0 3px 0 #c3c8ce,
+    0 8px 14px rgba(0, 0, 0, 0.12);
+}
+
+.toy-screw {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4a4d52, #17191d);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+.toy-screw::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 2px;
+  background: #0a0b0d;
+  clip-path: polygon(0 40%, 100% 40%, 100% 60%, 0 60%);
+}
+.toy-screw.tl { top: 13px; left: 13px; }
+.toy-screw.tr { top: 13px; right: 13px; }
+.toy-screw.bl { bottom: 13px; left: 13px; }
+.toy-screw.br { bottom: 13px; right: 13px; }
+
+/* 丝印：spec §4 — 定位必须用 translate，禁止改写成 transform 链 */
+.toy-etch {
+  position: absolute;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: #99a0a9;
+}
+.toy-etch.left {
+  left: 15px;
+  top: 50%;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  translate: 0 -50%;
+}
+.toy-etch.right {
+  right: 15px;
+  top: 50%;
+  writing-mode: vertical-rl;
+  translate: 0 -50%;
+}
+.toy-etch.top {
+  top: 11px;
+  left: 50%;
+  translate: -50% 0;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.toy-conn {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: none;
+}
+.toy-conn.connected { display: inline-block; background: #7ed9a2; box-shadow: 0 0 6px #7ed9a2; }
+.toy-conn.connecting { display: inline-block; background: #ffc456; box-shadow: 0 0 6px #ffb52e; animation: toyblink 0.8s infinite; }
+.toy-conn.disconnected { display: inline-block; background: #f78bb6; box-shadow: 0 0 6px #f78bb6; }
+
+.toy-legend {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  padding: 6px 0 12px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: #8a919b;
+  text-transform: uppercase;
+}
+.toy-legend span { display: flex; align-items: center; gap: 5px; }
+.toy-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.15);
+}
+
+.toy-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 88px);
+  grid-auto-rows: 88px;
+  gap: 14px;
+}
+
+/* ===== keys: cap + skirt, real downward travel ===== */
+.toy-key {
+  position: relative;
+  border-radius: 16px;
+  cursor: pointer;
+}
+.toy-key .top {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 27px;
+  color: #3a3f47;
+  transition: background 0.3s, box-shadow 0.3s, transform 0.06s;
+  box-shadow: 0 6px 0 #c7ccd2, 0 9px 11px rgba(0, 0, 0, 0.2);
+}
+.toy-key.pressed .top {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #c7ccd2, 0 3px 5px rgba(0, 0, 0, 0.2);
+}
+.toy-cmd .top {
+  background: linear-gradient(180deg, #ffffff, #eceef1);
+  border: 1px solid #d5d9de;
+}
+.toy-cmd.disabled .top { color: #b6bcc6; }
+
+.toy-agent .top {
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(2px);
+  box-shadow: 0 6px 0 rgba(196, 203, 212, 0.9), 0 9px 11px rgba(0, 0, 0, 0.18);
+}
+.toy-agent.pressed .top {
+  box-shadow: 0 2px 0 rgba(196, 203, 212, 0.9), 0 3px 5px rgba(0, 0, 0, 0.18);
+}
+.toy-agent .sw {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #9aa4b5;
+}
+.toy-agent .sw::before { content: "✛"; }
+
+/* 显式选中的 Agent 键：命令键只作用于它。深色描边环，一眼看清选了谁 */
+.toy-agent.focused .top {
+  outline: 3px solid #1f2937;
+  outline-offset: 3px;
+}
+.toy-agent.focused::after {
+  content: "◉";
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  font-size: 13px;
+  color: #1f2937;
+  background: #fff;
+  border-radius: 50%;
+  line-height: 1;
+  z-index: 2;
+}
+
+/* 整键发光（spec §4：状态色铺满键帽） */
+.a-idle .top { box-shadow: 0 6px 0 rgba(196, 203, 212, 0.9), 0 9px 11px rgba(0, 0, 0, 0.18), inset 0 0 14px rgba(255, 255, 255, 0.6); }
+.a-thinking .top {
+  background: rgba(124, 155, 245, 0.75);
+  box-shadow: 0 6px 0 rgba(196, 203, 212, 0.9), 0 0 24px #7c9bf5, inset 0 0 18px rgba(255, 255, 255, 0.35);
+  animation: toypulse 1.2s infinite;
+}
+.a-complete .top {
+  background: rgba(126, 217, 162, 0.75);
+  box-shadow: 0 6px 0 rgba(196, 203, 212, 0.9), 0 0 22px #7ed9a2, inset 0 0 18px rgba(255, 255, 255, 0.35);
+}
+.a-needs_input .top {
+  background: rgba(255, 196, 86, 0.8);
+  box-shadow: 0 6px 0 rgba(196, 203, 212, 0.9), 0 0 30px #ffb52e, inset 0 0 18px rgba(255, 255, 255, 0.35);
+  animation: toyblink 0.8s infinite;
+}
+.a-error .top {
+  background: rgba(247, 139, 182, 0.8);
+  box-shadow: 0 6px 0 rgba(196, 203, 212, 0.9), 0 0 24px #f78bb6, inset 0 0 18px rgba(255, 255, 255, 0.35);
+  animation: toypulse 0.6s infinite;
+}
+.a-thinking .sw, .a-complete .sw, .a-needs_input .sw, .a-error .sw {
+  color: rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.25);
+}
+@keyframes toypulse { 50% { opacity: 0.55; } }
+@keyframes toyblink {
+  35% {
+    background: rgba(255, 196, 86, 0.25);
+    box-shadow: 0 6px 0 rgba(196, 203, 212, 0.9), 0 0 6px #ffb52e, inset 0 0 10px rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* ===== knob ===== */
+.toy-knobwrap { position: relative; }
+.toy-knobside {
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #b6bbc2;
+  box-shadow: 0 7px 10px rgba(0, 0, 0, 0.24);
+}
+.toy-knob {
+  width: 80px;
+  height: 80px;
+  margin: 4px;
+  border-radius: 50%;
+  background: conic-gradient(from 200deg, #fff, #d5d8dd 25%, #f2f4f6 55%, #e0e3e8);
+  border: 1px solid #c3c7cd;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.25s;
+  box-shadow: inset 0 2px 3px #fff;
+}
+.toy-knob::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  margin-left: -14px;
+  background: linear-gradient(180deg, #c4c8cf, #e8eaee);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+.toy-dialv {
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  bottom: -4px;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+/* ===== joystick ===== */
+.toy-joy {
+  margin: 8px;
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  border: 2px dashed #9aa0a8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.toy-joy .cap {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 30%, #464a51, #101216 78%);
+  box-shadow: 0 2px 0 #000, 0 8px 11px rgba(0, 0, 0, 0.35);
+  transition: translate 0.15s;
+  position: relative;
+}
+.toy-joy .cap::after {
+  content: "◂ ▴ ▸ ▾";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  letter-spacing: 2px;
+  color: #6a7280;
+}
+
+/* ===== bottom row ===== */
+.toy-mic { grid-column: span 2; }
+.toy-mic.recording .top {
+  box-shadow: 0 2px 0 #c7ccd2, 0 0 0 3px #f78bb6, 0 0 26px #f78bb6;
+  transform: translateY(4px);
+}
+.toy-io {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 7px;
+  padding-left: 6px;
+}
+.toy-leds { display: flex; flex-direction: column; gap: 4px; }
+.toy-leds i {
+  width: 10px;
+  height: 5px;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 0 6px #fff;
+  border: 1px solid #cfd3d8;
+}
+.toy-touch {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 32%, #33363b, #0c0e11 78%);
+  box-shadow: 0 2px 0 #000, 0 5px 7px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+/* ===== embedded OLED log ===== */
+.toy-lcd {
+  margin: 16px 2px 4px;
+  background: linear-gradient(180deg, #0d1015, #151a21);
+  border-radius: 12px;
+  border: 1px solid #262c36;
+  padding: 9px 16px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  color: #8be9fd;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 20px;
+}
+.toy-lcd .t { color: #4a5568; flex-shrink: 0; }
+.toy-lcd .m { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 横屏/宽屏提示（spec §6） */
+.toy-rotate-hint {
+  display: none;
+  position: fixed;
+  inset: auto 0 14px 0;
+  text-align: center;
+  font-size: 12px;
+  color: #9aa0a8;
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .toy-rotate-hint { display: block; }
+}
