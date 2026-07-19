@@ -48,7 +48,7 @@
 </tr>
 </table>
 
-> 动图见顶部；`docs/media/openmicro-web-demo.mp4` 是更轻量（254KB）的社交版。App 截图为 Live 模式未连 Host 的静态态（键位空档、灯未点亮）。
+> 动图见顶部；`docs/media/openmicro-web-demo.mp4` 是更轻量（254KB）的社交版。两图均为灯态点亮：web 是 Demo 模式假 agent 自演，App 是原生端连上 Host 后 6 槽实时反映真实会话（蓝=思考 / 琥珀=待你输入 / 粉=出错）。
 
 ## 快速开始
 
