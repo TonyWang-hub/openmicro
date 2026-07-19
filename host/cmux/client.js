@@ -72,5 +72,37 @@ export function createCmuxClient({ bin, run = defaultRun }) {
         }
       }
     },
+
+    /**
+     * Type an arbitrary text string into a surface, then press Enter. Used by
+     * `prompt` (voice dispatch) — the whole utterance goes as one `send`, not
+     * per-key (send-key rejects multi-char), then a send-key enter submits it.
+     * @param {string} surfaceRef
+     * @param {string} text
+     */
+    async sendText(surfaceRef, text) {
+      const send = await run([bin, 'send', '--surface', surfaceRef, '--', text]);
+      if (send.code !== 0) {
+        throw new Error(`cmux send text failed (surface ${surfaceRef}): ${send.stderr.trim() || send.code}`);
+      }
+      const enter = await run([bin, 'send-key', '--surface', surfaceRef, '--', 'enter']);
+      if (enter.code !== 0) {
+        throw new Error(`cmux send-key enter failed (surface ${surfaceRef}): ${enter.stderr.trim() || enter.code}`);
+      }
+    },
+
+    /**
+     * Spawn a new cmux workspace running an agent command in the given dir —
+     * this is how `new_session` / `branch` open a fresh Claude/Codex remotely.
+     * The new session then auto-registers a light via its own hooks.
+     * @param {{ cwd: string, command: string, name?: string }} opts
+     */
+    async createSession({ cwd, command, name = 'cms-new' }) {
+      const argv = [bin, 'workspace', 'create', '--name', name, '--cwd', cwd, '--command', command];
+      const result = await run(argv);
+      if (result.code !== 0) {
+        throw new Error(`cmux workspace create failed: ${result.stderr.trim() || result.code}`);
+      }
+    },
   };
 }

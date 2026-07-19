@@ -50,8 +50,8 @@ CMUX_TARGET="${CMUX_PANEL_ID:-}"
 # invalid JSON and a silently-empty body.
 BODY="$(jq -n \
   --arg a "$AGENT" --arg c "$CHANNEL" --arg s "$SESSION_KEY" \
-  --arg l "$LABEL" --arg t "$TMUX_TARGET" --arg x "$CMUX_TARGET" --argjson p "$STDIN_JSON" \
-  '{agent:$a, channel:$c, sessionKey:$s, label:$l, tmuxTarget:($t | if . == "" then null else . end), cmuxTarget:($x | if . == "" then null else . end), payload:$p}' \
+  --arg l "$LABEL" --arg w "$CWD" --arg t "$TMUX_TARGET" --arg x "$CMUX_TARGET" --argjson p "$STDIN_JSON" \
+  '{agent:$a, channel:$c, sessionKey:$s, label:$l, cwd:($w | if . == "" then null else . end), tmuxTarget:($t | if . == "" then null else . end), cmuxTarget:($x | if . == "" then null else . end), payload:$p}' \
   2>/dev/null)" || exit 0
 
 # Synchronous, but bounded and error-swallowing. Backgrounding (`&`+disown) was

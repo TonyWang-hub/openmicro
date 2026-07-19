@@ -73,7 +73,7 @@ function parseIngestBody(body) {
     return { ok: false, error: 'body must be a JSON object' };
   }
 
-  const { agent, channel, sessionKey, payload, label, tmuxTarget, cmuxTarget } =
+  const { agent, channel, sessionKey, payload, label, cwd, tmuxTarget, cmuxTarget } =
     /** @type {Record<string, unknown>} */ (body);
 
   if (!VALID_AGENTS.has(/** @type {string} */ (agent))) {
@@ -96,6 +96,7 @@ function parseIngestBody(body) {
       channel: /** @type {IngestChannel} */ (channel),
       sessionKey,
       label: typeof label === 'string' ? label : null,
+      cwd: typeof cwd === 'string' && cwd ? cwd : null,
       tmuxTarget: typeof tmuxTarget === 'string' && tmuxTarget ? tmuxTarget : null,
       cmuxTarget: typeof cmuxTarget === 'string' && cmuxTarget ? cmuxTarget : null,
       payload: /** @type {Record<string, unknown>} */ (payload),
@@ -145,10 +146,10 @@ export function createIngestHandler({ store, mapRaw = createAdapterMapRaw() }) {
       return;
     }
 
-    const { agent, channel, sessionKey, label, tmuxTarget, cmuxTarget, payload } = parsed.value;
+    const { agent, channel, sessionKey, label, cwd, tmuxTarget, cmuxTarget, payload } = parsed.value;
     // Auto-assign a slot for this live session (session_id). No "unknown
     // sessionKey" rejection: any session that reaches here claims/keeps a slot.
-    const slotId = store.resolveSession({ sessionKey, agent, label, tmuxTarget, cmuxTarget });
+    const slotId = store.resolveSession({ sessionKey, agent, label, cwd, tmuxTarget, cmuxTarget });
     const binding = { slotId, agent, sessionKey };
 
     const event = mapRaw(agent, channel, payload, binding);

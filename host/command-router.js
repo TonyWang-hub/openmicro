@@ -107,54 +107,65 @@ export function createCommandRouter({
   }
 
   /**
+   * Voice-dispatch: type the spoken `text` into the focused session's terminal
+   * and submit it (Enter). Same target resolution + dead-slot cleanup as accept.
+   * @param {CommandRequest & { text?: string }} request
+   */
+  async function handlePrompt(request) {
+    const slot = findSlot(request.slotId);
+    if (!slot) {
+      fail(`slot ${request.slotId} not bound`);
+      return;
+    }
+    const text = typeof request.text === 'string' ? request.text.trim() : '';
+    if (!text) {
+      emit({ type: 'log', level: 'info', message: '语音为空，未派活' });
+      return;
+    }
+    try {
+      if (slot.cmuxTarget && cmux) {
+        await cmux.sendText(slot.cmuxTarget, text);
+        emit({ type: 'log', level: 'info', message: `🎙 派活 → ${slot.label ?? 'cmux'}：${text}` });
+      } else if (slot.tmuxTarget) {
+        // tmux send-keys -- "<literal text>" types it; then Enter submits.
+        await tmux.sendKeys(slot.tmuxTarget, [text, 'Enter']);
+        emit({ type: 'log', level: 'info', message: `🎙 派活 → ${slot.label ?? 'tmux'}：${text}` });
+      } else {
+        emit({ type: 'log', level: 'info', message: `${slot.label ?? 'session'} 不在 tmux/cmux，无法远程派活` });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (/not.?found|no such|unknown (?:surface|pane|session)/i.test(message)) {
+        store.dropSlot?.(request.slotId);
+        emit({ type: 'log', level: 'info', message: `${slot.label ?? '会话'} 已关闭，已从灯位移除` });
+      } else {
+        fail(message);
+      }
+    }
+  }
+
+  /**
+   * Spawn a fresh agent session remotely. `new_session` opens one in the default
+   * cwd; `branch` opens one in the selected session's project dir (fork the line
+   * of work). The new session auto-registers a light via its own hooks.
    * @param {CommandRequest} request
    */
-  async function handleNewSession(request) {
-    const { slotId } = request;
-    if (slotId < 0 || slotId >= maxSlots) {
-      fail(`slot ${slotId} out of range (max ${maxSlots})`);
+  async function handleSpawn(request) {
+    const isBranch = request.action === 'branch';
+    const cwd = isBranch ? (store.slotCwd?.(request.slotId) ?? defaultCwd) : defaultCwd;
+    const agent = isBranch ? (findSlot(request.slotId)?.agent ?? 'claude-code') : 'claude-code';
+    const command = commands[agent];
+    if (!command) {
+      fail(`no start command for agent ${agent}`);
       return;
     }
-
-    let slot = findSlot(slotId);
-    if (!slot) {
-      if (store.snapshot().length >= maxSlots) {
-        fail(`cannot open more than ${maxSlots} slots`);
-        return;
-      }
-      fail(`slot ${slotId} not bound`);
-      return;
-    }
-
-    // The tmux session name is the injectable target (from the forwarder), or
-    // the sessionKey when a slot was statically pre-bound.
-    const tmuxName = slot.tmuxTarget ?? slot.sessionKey;
     try {
-      const exists = await tmux.sessionExists(tmuxName);
-      if (!exists) {
-        const command = commands[slot.agent];
-        if (!command) {
-          fail(`no start command for agent ${slot.agent}`);
-          return;
-        }
-        await tmux.newSession({
-          name: tmuxName,
-          cwd: defaultCwd,
-          command,
-        });
-        emit({
-          type: 'log',
-          level: 'info',
-          message: `created tmux session ${tmuxName} (${command})`,
-        });
+      if (cmux?.createSession) {
+        await cmux.createSession({ cwd, command });
       } else {
-        emit({
-          type: 'log',
-          level: 'info',
-          message: `reattach existing session ${tmuxName}`,
-        });
+        await tmux.newSession({ name: `cms-new-${process.pid}-${Math.floor(process.hrtime()[1] / 1e3)}`, cwd, command });
       }
-      attachPty(slot.slotId, tmuxName);
+      emit({ type: 'log', level: 'info', message: `${isBranch ? '⤴ 分叉' : '💭 新会话'} → 已在 ${cwd} 开 ${command}` });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       fail(message);
@@ -183,7 +194,9 @@ export function createCommandRouter({
       return;
     }
     const { action, slotId } = request;
-    if (typeof slotId !== 'number' || !Number.isInteger(slotId)) {
+    // new_session opens a brand-new session and carries no slotId; every other
+    // action targets an existing slot and requires an integer slotId.
+    if (action !== 'new_session' && (typeof slotId !== 'number' || !Number.isInteger(slotId))) {
       fail('slotId must be an integer');
       return;
     }
@@ -194,8 +207,12 @@ export function createCommandRouter({
       case 'quick':
         await handleAcceptReject(request);
         break;
+      case 'prompt':
+        await handlePrompt(request);
+        break;
       case 'new_session':
-        await handleNewSession(request);
+      case 'branch':
+        await handleSpawn(request);
         break;
       case 'focus':
         handleFocus(request);

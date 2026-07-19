@@ -49,7 +49,7 @@ export function createStore({
   function snapshot() {
     return [...slots.values()]
       .sort((a, b) => a.slotId - b.slotId)
-      .map(({ slotId, agent, sessionKey, state, meta, lastEventAt, label, tmuxTarget, cmuxTarget }) => ({
+      .map(({ slotId, agent, sessionKey, state, meta, lastEventAt, label, cwd, tmuxTarget, cmuxTarget }) => ({
         slotId,
         agent,
         sessionKey,
@@ -57,6 +57,7 @@ export function createStore({
         meta,
         lastEventAt,
         label: label ?? null,
+        cwd: cwd ?? null,
         tmuxTarget: tmuxTarget ?? null,
         cmuxTarget: cmuxTarget ?? null,
       }));
@@ -115,11 +116,12 @@ export function createStore({
    * @param {{ sessionKey: string, agent: string, label?: string|null, tmuxTarget?: string|null, cmuxTarget?: string|null }} info
    * @returns {number} the assigned slotId
    */
-  function resolveSession({ sessionKey, agent, label = null, tmuxTarget = null, cmuxTarget = null }) {
+  function resolveSession({ sessionKey, agent, label = null, cwd = null, tmuxTarget = null, cmuxTarget = null }) {
     for (const slot of slots.values()) {
       if (slot.sessionKey === sessionKey) {
         slot.lastEventAt = now();
         if (label != null) slot.label = label;
+        if (cwd != null) slot.cwd = cwd;
         if (tmuxTarget != null) slot.tmuxTarget = tmuxTarget;
         if (cmuxTarget != null) slot.cmuxTarget = cmuxTarget;
         if (agent) slot.agent = agent;
@@ -154,6 +156,7 @@ export function createStore({
       meta: 'bound',
       lastEventAt: now(),
       label,
+      cwd,
       tmuxTarget,
       cmuxTarget,
     });
@@ -169,6 +172,16 @@ export function createStore({
    */
   function tmuxTargetForSlot(slotId) {
     return slots.get(slotId)?.tmuxTarget ?? null;
+  }
+
+  /**
+   * The working directory a slot's session runs in (full path), used by
+   * `branch` to spawn a new session in the same project. Null if unknown.
+   * @param {number} slotId
+   * @returns {string|null}
+   */
+  function slotCwd(slotId) {
+    return slots.get(slotId)?.cwd ?? null;
   }
 
   /**
@@ -250,5 +263,5 @@ export function createStore({
     emitChange();
   }
 
-  return { bindSlot, resolveSession, tmuxTargetForSlot, dropSlot, applyEvent, tick, snapshot };
+  return { bindSlot, resolveSession, tmuxTargetForSlot, slotCwd, dropSlot, applyEvent, tick, snapshot };
 }
