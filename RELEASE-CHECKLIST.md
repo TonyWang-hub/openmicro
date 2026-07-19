@@ -28,7 +28,12 @@
    git push -u origin main
    ```
 4. **（可选）本地目录改名** `codex-micro-sim` → `openmicro`：会让 `app/ios/Flutter/flutter_export_environment.sh` 等生成文件的绝对路径失效，改完在 `app/` 跑一次 `flutter pub get` + `flutter clean` 重生成即可。
-5. **仓库 About**：填一句 tagline + 在 Security policy 里确认 GitHub Security Advisories 已开（`SECURITY.md` 指向它）。
+5. **开 GitHub Pages（live demo）**：Settings → Pages → Source 选 **GitHub Actions**。首推后 `Deploy demo to GitHub Pages` workflow 会自动构建 `web/` 的 Demo 模式并发布到 `https://<你>.github.io/openmicro/`。然后把 `README.md` 里的 `YOUR-GITHUB` 占位换成你的命名空间：
+   ```bash
+   sed -i '' 's#YOUR-GITHUB#<你的github用户名>#g' README.md && git commit -am 'docs: fill live demo url'
+   ```
+   本地想先看产物：`npm run build:demo` → 用任意静态服务器打开 `demo-dist/`（Demo 模式零后端）。
+6. **仓库 About**：填一句 tagline + 在 Security policy 里确认 GitHub Security Advisories 已开（`SECURITY.md` 指向它）。
 
 ## ⏳ 需真机/设备才能验收（推之后可作为 v0.1 已知项）
 

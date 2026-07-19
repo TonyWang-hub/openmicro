@@ -6,6 +6,8 @@
 
 > **Inspired by, not affiliated with, the sold-out $230 "Codex Micro" agent macropad.** OpenMicro is an independent, open-source *software* reimagining of that interaction — it is **not** an OpenAI or Work Louder product and ships no hardware. "Codex" and "Codex Micro" are marks of their respective owners. The code keeps an internal `cms` prefix for historical reasons; it has no bearing on the public name.
 
+**▶︎ Live demo (no install, no backend): https://YOUR-GITHUB.github.io/openmicro/** — the phone keyboard in Demo mode with fake agents acting out the lights/approvals. Best opened on a phone. _(Published by the "Deploy demo to GitHub Pages" workflow once you push; replace `YOUR-GITHUB` with your namespace.)_
+
 ## 一句话定位
 
 真机 Codex Micro 只是一个 USB/蓝牙 HID 键盘 + RGB 灯，智能全在 ChatGPT 桌面 App 里；本项目用纯软件（Host 服务 + 网页/原生 App）复刻同样的体验：**6 盏灯实时反映你本机每个 agent 会话的状态，按键直接把 accept/reject/语音指令注入回那个真实会话**。

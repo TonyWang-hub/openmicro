@@ -4,3 +4,6 @@ dist/
 .DS_Store
 *.log
 .env
+
+# 静态 demo 构建产物（Pages workflow 现构建）
+demo-dist/

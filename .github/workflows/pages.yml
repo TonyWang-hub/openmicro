@@ -1,0 +1,49 @@
+name: Deploy demo to GitHub Pages
+
+# 把 web/ 的 Demo 模式（零 Host 依赖、假 agent 演戏）构建成静态站点并发布到
+# GitHub Pages，作为项目门面：访客点 README 的 live demo 链接即可直接把玩。
+# 只在 main 推送时部署；PR 只在 CI 里跑构建+断言（见 ci.yml web job）。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 供 actions/deploy-pages 用的最小权限。
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一时刻只跑一个部署，不打断进行中的（避免半个站点）。
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build static demo
+        run: node scripts/build-demo.mjs demo-dist
+      - name: Verify build (browser-free assertions)
+        working-directory: web
+        run: node --test "test/build-demo.test.js"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: demo-dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

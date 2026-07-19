@@ -9,6 +9,7 @@
   "scripts": {
     "postinstall": "node scripts/fix-node-pty-perms.js",
     "test": "node --test host/*.test.js host/*/*.test.js host/*/*/*.test.js",
+    "build:demo": "node scripts/build-demo.mjs demo-dist",
     "start": "node scripts/fix-node-pty-perms.js && node host/index.js",
     "dev": "node scripts/fix-node-pty-perms.js && node --watch host/index.js"
   },
