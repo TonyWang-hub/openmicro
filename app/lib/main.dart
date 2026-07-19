@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 import 'model/slot.dart';
 import 'keyboard/device.dart';
 import 'net/live_client.dart';
 import 'haptics/haptics.dart';
 import 'audio/keysound.dart';
+import 'pair/scan_page.dart';
 
 // M2/M3: connect screen (paste pairing URL) → live keyboard wired to the Host
 // WS, with haptics + key sounds on interaction and the explicit-focus safety
@@ -108,6 +110,18 @@ class _ConnectScreenState extends State<ConnectScreen> {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => KeyboardScreen(target: t)));
   }
 
+  Future<void> _scan() async {
+    final scanned = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const ScanPage()),
+    );
+    if (scanned == null || scanned.isEmpty || !mounted) return;
+    setState(() {
+      _urlCtrl.text = scanned;
+      _error = null;
+    });
+    await _connect();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -148,8 +162,17 @@ class _ConnectScreenState extends State<ConnectScreen> {
                 width: double.infinity,
                 child: FilledButton(onPressed: _connect, child: const Text('连接')),
               ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _scan,
+                  icon: const Icon(Icons.qr_code_scanner),
+                  label: const Text('扫码'),
+                ),
+              ),
               const SizedBox(height: 12),
-              const Text('手机需与 Host 同一局域网。扫码功能在下个里程碑。',
+              const Text('手机需与 Host 同一局域网。也可点"扫码"直接扫电脑 /pair 页面的二维码。',
                   style: TextStyle(color: Colors.black38, fontSize: 12)),
             ]),
           ),
@@ -169,6 +192,9 @@ class KeyboardScreen extends StatefulWidget {
 class _KeyboardScreenState extends State<KeyboardScreen> {
   late final LiveClient _client;
   final _ks = KeySound();
+  final _speech = SpeechToText();
+  bool _speechAvailable = false;
+  String _lastWords = '';
   List<SlotState> _slots = const [];
   int? _focused;
   String _reasoning = 'MED';
@@ -178,6 +204,7 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
   @override
   void initState() {
     super.initState();
+    _initSpeech();
     _client = LiveClient(host: widget.target.host, port: widget.target.port, token: widget.target.token);
     _client.slots.listen((s) {
       final hadNeeds = _slots.any((x) => x.state == AgentState.needsInput);
@@ -198,9 +225,22 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
     _client.connect();
   }
 
+  Future<void> _initSpeech() async {
+    try {
+      final ok = await _speech.initialize(
+        onError: (_) {},
+        onStatus: (_) {},
+      );
+      if (mounted) setState(() => _speechAvailable = ok);
+    } catch (_) {
+      if (mounted) setState(() => _speechAvailable = false);
+    }
+  }
+
   @override
   void dispose() {
     _client.dispose();
+    if (_speech.isListening) _speech.stop();
     super.dispose();
   }
 
@@ -287,12 +327,40 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
           },
           onPttStart: () {
             _ks.pttStart();
+            if (_focused == null) {
+              Haptics.instance.alert();
+              _flash('先点一盏 Agent 灯选中它，再按住说话');
+              return;
+            }
+            if (!_speechAvailable) {
+              Haptics.instance.alert();
+              _flash('语音识别不可用（模拟器或未授权），改用键盘');
+              return;
+            }
+            _lastWords = '';
             Haptics.instance.alert();
-            _flash('🎙 录音中…（语音派活二期）');
+            _flash('🎙 录音中…');
+            _speech.listen(
+              localeId: 'zh_CN',
+              onResult: (r) {
+                _lastWords = r.recognizedWords;
+                _flash('🎙 ${r.recognizedWords}');
+              },
+            );
           },
           onPttEnd: () {
             _ks.pttStop();
             Haptics.instance.press();
+            if (_focused == null || !_speechAvailable) return;
+            _speech.stop();
+            final words = _lastWords.trim();
+            if (words.isEmpty) {
+              _flash('没听清');
+              return;
+            }
+            _client.sendPrompt(_focused!, words);
+            Haptics.instance.success();
+            _flash('🎙 已派活：$words');
           },
           onTouch: () {
             _ks.keyUp('touch');

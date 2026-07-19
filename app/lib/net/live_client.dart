@@ -170,6 +170,17 @@ class LiveClient {
     });
   }
 
+  /// Sends a `prompt` command: injects free-text [text] (voice-to-text
+  /// result) into the explicitly-focused [slotId]. Same best-effort /
+  /// silent-drop semantics as [sendCommand] when not connected.
+  void sendPrompt(int slotId, String text) {
+    if (!_connected || _channel == null) return;
+    _send({
+      'type': 'command',
+      'payload': {'action': 'prompt', 'slotId': slotId, 'text': text},
+    });
+  }
+
   void _send(Map<String, dynamic> payload) {
     final channel = _channel;
     if (channel == null) return;
