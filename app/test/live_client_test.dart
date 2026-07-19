@@ -4,8 +4,8 @@ import 'dart:io';
 
 import 'package:async/async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:microtoy/model/slot.dart';
-import 'package:microtoy/net/live_client.dart';
+import 'package:openmicro/model/slot.dart';
+import 'package:openmicro/net/live_client.dart';
 
 /// Minimal fake Host: a plain [HttpServer] that upgrades every request to a
 /// WebSocket, mirroring the toy Host's `ws://<host>:<port>/?token=<token>`

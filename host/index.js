@@ -41,7 +41,7 @@ const PAIRING_GUIDANCE_HTML = `<!doctype html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>codex-micro-sim · 需要配对</title>
+  <title>OpenMicro · 需要配对</title>
   <style>
     body {
       font-family: ui-monospace, monospace;
@@ -125,13 +125,13 @@ function ensureWebPlaceholder() {
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <title>codex-micro-sim</title>
+  <title>OpenMicro</title>
   <style>
     body { font-family: ui-monospace, monospace; background: #111; color: #ddd; padding: 2rem; }
   </style>
 </head>
 <body>
-  <h1>codex-micro-sim</h1>
+  <h1>OpenMicro</h1>
   <p>Host is up. Web UI lands in Task 9.</p>
 </body>
 </html>

@@ -1,6 +1,6 @@
 {
-  "name": "Micro Toy — agent macropad",
-  "short_name": "MicroToy",
+  "name": "OpenMicro — agent macropad",
+  "short_name": "OpenMicro",
   "description": "A pocket replica of a certain sold-out $230 agent macropad. Works with Claude Code too.",
   "start_url": "/m",
   "scope": "/m",

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/start.sh — 一键启动 codex-micro-sim Host（本机开发/日常使用）。
+# scripts/start.sh — 一键启动 OpenMicro Host（本机开发/日常使用）。
 #
 # 做的事（按顺序）：
 #   1. 检查 node / jq / curl 是否在 PATH（jq、curl 是全局 hooks 转发脚本

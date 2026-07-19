@@ -1,4 +1,4 @@
-# Contributing to codex-micro-sim
+# Contributing to OpenMicro
 
 Thanks for your interest in contributing! This project has three components — a Node.js **Host**, a static **web** client, and a Flutter **app** — and each has its own local setup and test command.
 
@@ -10,7 +10,7 @@ Clone the repo and set up the component(s) you plan to work on:
 
 ```bash
 git clone <repo-url>
-cd codex-micro-sim
+cd openmicro
 ```
 
 ### Host (`host/`)

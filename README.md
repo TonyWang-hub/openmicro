@@ -1,8 +1,10 @@
-# codex-micro-sim
+# OpenMicro
 
-**Codex Micro 软件模拟器**：手机/网页遥控本机 `claude` / `codex`，看灯 + 审批 + 语音派活——不用凑近电脑，也不用手动敲 accept/reject。
+**An open-source software remote for your local coding agents** — watch 6 lights track every `claude` / `codex` session on your machine, and approve / reject / voice-dispatch straight back into the real session from your phone or browser. No leaning over the keyboard, no manually typing accept/reject.
 
-> ⚠️ **对外发布前必须改名**。"Codex Micro" 是 OpenAI × Work Louder 硬件宏键盘的产品名，本项目只是**软件复刻其交互**（并非官方产品，也不隶属于它）。代码内部继续用 `cms`（codex-micro-sim）前缀不受影响，但公开分发 / 起对外项目名时必须换一个不含"Codex Micro"的名字（Tactic Remote 项目已有过被要求改名的前科，见 `docs/specs/2026-07-17-toy-demo-live-design.md` §8）。
+> 手机/网页遥控本机 `claude` / `codex`：看灯 + 审批 + 语音派活——不用凑近电脑，也不用手动敲 accept/reject。
+
+> **Inspired by, not affiliated with, the sold-out $230 "Codex Micro" agent macropad.** OpenMicro is an independent, open-source *software* reimagining of that interaction — it is **not** an OpenAI or Work Louder product and ships no hardware. "Codex" and "Codex Micro" are marks of their respective owners. The code keeps an internal `cms` prefix for historical reasons; it has no bearing on the public name.
 
 ## 一句话定位
 

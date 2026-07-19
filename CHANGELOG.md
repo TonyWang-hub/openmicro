@@ -25,5 +25,5 @@ Initial public-facing snapshot: a software simulator that remotely monitors and 
 - **Remote capabilities**: status-light monitoring (lights + LCD-style status text), accept/reject approval routing, voice-dictated task injection, and QR-code based pairing for LAN access.
 - Explicit-focus safety rule: command keys only ever act on the agent light the user explicitly selected, enforced client-side before any command is sent.
 
-[Unreleased]: https://github.com/<OWNER>/<REPO>/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/<OWNER>/<REPO>/releases/tag/v0.1.0
+[Unreleased]: https://github.com/YOUR-GITHUB-ORG/openmicro/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/YOUR-GITHUB-ORG/openmicro/releases/tag/v0.1.0

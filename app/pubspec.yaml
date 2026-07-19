@@ -1,4 +1,4 @@
-name: microtoy
+name: openmicro
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -46,6 +46,10 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  # Directly imported by test/ (StreamQueue) — declare it so the
+  # depend_on_referenced_packages lint stays clean.
+  async: ^2.11.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

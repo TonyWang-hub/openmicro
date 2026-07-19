@@ -13,7 +13,7 @@ This project is pre-1.0 and does not yet maintain parallel maintenance branches.
 
 Please **do not** open a public GitHub issue for security vulnerabilities.
 
-Instead, report privately to: **<CONTACT>**
+Instead, report it privately via GitHub: open a draft security advisory at **Security → Advisories → Report a vulnerability** on the project repository. If that is unavailable, contact the maintainers listed in the repository's About section.
 
 Include, where possible:
 

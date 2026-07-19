@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:async/async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:microtoy/net/live_client.dart';
+import 'package:openmicro/net/live_client.dart';
 
 // Reuses the FakeHost fake Host from live_client_test.dart (plain HttpServer
 // upgraded to WebSocket, mirroring the toy Host's `ws://<host>:<port>/?token=`

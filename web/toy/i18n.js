@@ -78,8 +78,8 @@ const DICTS = {
     'demo.boot': "LET'S BUILD — demo powered on, agents at work",
 
     // --- pair.html ---
-    'pair.title': 'codex-micro-sim · phone pairing',
-    'pair.heading': 'scan with your phone to open codex-micro-sim',
+    'pair.title': 'OpenMicro · phone pairing',
+    'pair.heading': 'scan with your phone to open OpenMicro',
     'pair.generating': 'generating…',
     'pair.hint': 'phone must be on the same LAN as this computer',
     'pair.error': 'couldn’t generate the QR code, please refresh',
@@ -162,8 +162,8 @@ const DICTS = {
 
     'demo.boot': "LET'S BUILD — demo 上电，agent 们开工了",
 
-    'pair.title': 'codex-micro-sim · 手机配对',
-    'pair.heading': '用手机扫码打开 codex-micro-sim',
+    'pair.title': 'OpenMicro · 手机配对',
+    'pair.heading': '用手机扫码打开 OpenMicro',
     'pair.generating': '生成中…',
     'pair.hint': '手机需与本机同一局域网',
     'pair.error': '二维码生成失败，请刷新重试',

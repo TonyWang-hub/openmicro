@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:microtoy/model/slot.dart';
+import 'package:openmicro/model/slot.dart';
 
 void main() {
   group('SlotState.fromJson', () {

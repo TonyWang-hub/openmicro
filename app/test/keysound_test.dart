@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:microtoy/audio/keysound.dart';
+import 'package:openmicro/audio/keysound.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

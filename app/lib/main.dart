@@ -21,15 +21,15 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Haptics.instance.init();
   await KeySound().init();
-  runApp(const MicroToyApp());
+  runApp(const OpenMicroApp());
 }
 
-class MicroToyApp extends StatelessWidget {
-  const MicroToyApp({super.key});
+class OpenMicroApp extends StatelessWidget {
+  const OpenMicroApp({super.key});
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MicroToy',
+      title: 'OpenMicro',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(useMaterial3: true, brightness: Brightness.light),
       localizationsDelegates: const [
@@ -152,7 +152,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
-                  'MicroToy',
+                  'OpenMicro',
                   style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),

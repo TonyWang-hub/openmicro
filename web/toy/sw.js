@@ -1,5 +1,5 @@
 /**
- * Service Worker for the Micro Toy PWA app-shell (offline-first for /toy/ static assets only).
+ * Service Worker for the OpenMicro PWA app-shell (offline-first for /toy/ static assets only).
  *
  * IMPORTANT SCOPE LIMITATION (read before touching this file):
  * This script is served from /toy/sw.js. Per the Service Worker spec, the

@@ -1,4 +1,4 @@
-# microtoy
+# OpenMicro
 
 A new Flutter project.
 

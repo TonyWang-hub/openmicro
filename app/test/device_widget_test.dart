@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:microtoy/keyboard/device.dart';
-import 'package:microtoy/model/slot.dart';
+import 'package:openmicro/keyboard/device.dart';
+import 'package:openmicro/model/slot.dart';
 
 /// Ordering of the `GestureDetector`s produced inside `_grid()` in
 /// lib/keyboard/device.dart, in build/declaration order:
