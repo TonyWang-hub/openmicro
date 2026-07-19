@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
@@ -18,6 +18,8 @@
     import { haptic } from '/toy/haptics.js';
     import { createDemoDirector } from '/toy/demo-script.js';
     import { connectLive } from '/toy/live.js';
+    import { t, getLang } from '/toy/i18n.js';
+    document.documentElement.lang = getLang() === 'zh' ? 'zh-CN' : 'en';
 
     // PWA offline shell: register the /toy/-scoped service worker (best effort).
     // Scope is capped at /toy/ by the browser (Host doesn't send
@@ -70,24 +72,26 @@
       const text = sttFinalText.trim();
       recognition = null;
       if (!text) {
-        kbd.flashLcd('没听清');
+        kbd.flashLcd(t('ptt.notHeard'));
         return;
       }
       live?.sendCommand('prompt', focusedSlot, text);
-      kbd.flashLcd(`🎙 已派活：${text}`);
+      kbd.flashLcd(t('ptt.dispatched', { text }));
     }
 
     function startSpeechRecognition() {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) {
-        kbd.flashLcd('此浏览器不支持语音，用键盘');
+        kbd.flashLcd(t('ptt.noSpeechSupport'));
         return;
       }
       sttFinalText = '';
       sttFinished = false;
       try {
         recognition = new SR();
-        recognition.lang = 'zh-CN';
+        // STT input language follows the current UI language (spec §「网页」
+        // is zh-only; i18n adds en-US for English UI users).
+        recognition.lang = getLang() === 'zh' ? 'zh-CN' : 'en-US';
         recognition.interimResults = true;
         recognition.continuous = false;
         recognition.onresult = (ev) => {
@@ -104,7 +108,7 @@
         recognition.start();
       } catch {
         recognition = null;
-        kbd.flashLcd('此浏览器不支持语音，用键盘');
+        kbd.flashLcd(t('ptt.noSpeechSupport'));
       }
     }
 
@@ -116,7 +120,7 @@
           focusedSlot = slotId;
           kbd.setFocused(slotId);
           const who = liveMode ? (slotLabel(slotId) || `agent ${slotId}`) : `agent ${slotId}`;
-          kbd.flashLcd(`已选中 ${who}（◎✓/⊗ 只作用于它）`);
+          kbd.flashLcd(t('agent.selected', { who }));
           if (liveMode) live?.sendCommand('focus', slotId);
           else director?.focus(slotId);
         },
@@ -124,36 +128,38 @@
           audio.keyUp('cmd'); haptic('press');
           // 命令键必须先显式选中一盏 Agent 灯，绝不自动挑（防误注入到别的会话/对话窗口）。
           if ((action === 'accept' || action === 'reject' || action === 'quick') && focusedSlot === null) {
-            kbd.flashLcd('先点一盏 Agent 灯选中它，再按此键');
+            kbd.flashLcd(t('agent.needsSelectionFirst'));
             haptic('alert');
             return;
           }
           if (liveMode) {
             if (action === 'accept' || action === 'reject') {
               live?.sendCommand(action, focusedSlot);
-              kbd.flashLcd(`${action === 'accept' ? '◎✓ 接受' : '⊗ 拒绝'} → ${slotLabel(focusedSlot) || ('agent ' + focusedSlot)}`);
+              const who = slotLabel(focusedSlot) || ('agent ' + focusedSlot);
+              kbd.flashLcd(t(action === 'accept' ? 'cmd.live.acceptedTo' : 'cmd.live.rejectedTo', { who }));
             } else if (action === 'quick') {
               live?.sendCommand('quick', focusedSlot); // 注入回车：推进"按 Enter 继续"类提示
-              kbd.flashLcd(`⚡ 继续（回车）→ ${slotLabel(focusedSlot) || ('agent ' + focusedSlot)}`);
+              const who = slotLabel(focusedSlot) || ('agent ' + focusedSlot);
+              kbd.flashLcd(t('cmd.live.quickTo', { who }));
             } else if (action === 'new_session') {
-              kbd.flashLcd('💭 新会话请在电脑上开 claude/codex，会自动上灯');
+              kbd.flashLcd(t('cmd.live.newSession'));
             } else if (action === 'branch') {
-              kbd.flashLcd('⤴ 分叉是电脑端操作，手机不远程执行');
+              kbd.flashLcd(t('cmd.live.branch'));
             }
             return;
           }
           // demo 模式
           if (action === 'accept') director?.approve(focusedSlot);
           else if (action === 'reject') director?.reject(focusedSlot);
-          else if (action === 'quick') kbd.flashLcd('⚡ 已催 agent 一把（继续）');
-          else if (action === 'branch') kbd.flashLcd('⤴ 从当前思路分叉一条新线（demo）');
-          else if (action === 'new_session') kbd.flashLcd('💭 新会话线程已创建（demo）');
+          else if (action === 'quick') kbd.flashLcd(t('cmd.demo.quick'));
+          else if (action === 'branch') kbd.flashLcd(t('cmd.demo.branch'));
+          else if (action === 'new_session') kbd.flashLcd(t('cmd.demo.newSession'));
         },
         onPttStart() {
           audio.pttStart(); haptic('alert');
           if (liveMode) {
             if (focusedSlot === null) {
-              kbd.flashLcd('先选中一盏 Agent 灯再语音');
+              kbd.flashLcd(t('ptt.selectAgentFirst'));
               return;
             }
             startSpeechRecognition();
@@ -173,36 +179,36 @@
         },
         onKnob(level) {
           audio.knobTick(); haptic('detent');
-          if (liveMode) kbd.flashLcd(`思考力度显示 ${level}（远程不改真 agent 设置）`);
-          else kbd.flashLcd(`思考力度 → ${level}（agent 表示压力${level === 'XHIGH' ? '山大' : '不大'}）`);
+          if (liveMode) kbd.flashLcd(t('knob.liveDisplay', { level }));
+          else kbd.flashLcd(t('knob.demoDisplay', { level, pressure: t(level === 'XHIGH' ? 'knob.pressureHigh' : 'knob.pressureLow') }));
         },
         onJoy(dir) {
           audio.keyUp('cmd'); haptic('tap');
           if (dir === 'left' || dir === 'right') {
             // 在"活着的"slot 之间循环选中（live=有状态的；demo=全部 6 个）
             const active = liveMode ? activeSlots() : [0, 1, 2, 3, 4, 5];
-            if (active.length === 0) { kbd.flashLcd('暂无活跃 agent'); return; }
+            if (active.length === 0) { kbd.flashLcd(t('agent.noneActive')); return; }
             const cur = active.indexOf(focusedSlot);
             const next = active[(cur + (dir === 'right' ? 1 : active.length - 1) + active.length) % active.length];
             focusedSlot = next;
             kbd.setFocused(next);
-            kbd.flashLcd(`焦点 → ${slotLabel(next) || ('agent ' + next)}`);
+            kbd.flashLcd(t('agent.focusArrow', { who: slotLabel(next) || ('agent ' + next) }));
             if (liveMode) live?.sendCommand('focus', next);
             else director?.focus(next);
           } else {
-            kbd.flashLcd(dir === 'up' ? '↟ 回到顶部' : '↡ 滚动日志');
+            kbd.flashLcd(t(dir === 'up' ? 'joy.top' : 'joy.scrollLog'));
           }
         },
         onTouch() {
           audio.keyUp('touch'); haptic('tap');
-          kbd.flashLcd('触摸传感器：嘀。（长按切换音色）');
+          kbd.flashLcd(t('touch.tapHint'));
         },
         onTouchLongPress() {
           const next = (localStorage.getItem('toy-profile') || 'pom') === 'pom' ? 'pok' : 'pom';
           localStorage.setItem('toy-profile', next);
           audio.setProfile(next);
           audio.keyUp('cmd'); haptic('alert');
-          kbd.flashLcd(`音色 → ${next === 'pom' ? 'POM 清脆轴' : 'POK 静音轴'}`);
+          kbd.flashLcd(t('touch.profileSwitched', { name: t(next === 'pom' ? 'touch.profilePom' : 'touch.profilePok') }));
         },
       },
     });
@@ -215,7 +221,7 @@
 
     if (liveMode) {
       kbd.setMicDisabled(false); // 键可按，松开时提示二期
-      kbd.setLcd('LIVE · 连接中…');
+      kbd.setLcd(t('live.connecting'));
       live = connectLive({
         token,
         onState(slotId, state, label) {
@@ -225,14 +231,14 @@
           if (state === 'needs_input') {
             haptic('alert');
             const who = slotLabel(slotId) || `agent ${slotId}`;
-            kbd.setLcd(`${who} 需要你 — 点它选中再按 ◎✓/⊗`);
+            kbd.setLcd(t('live.needsYou', { who }));
           }
         },
         onLcd(text) { kbd.setLcd(text); },
         onConnection(s) {
           kbd.setConnection(s);
-          if (s === 'connected') kbd.setLcd('LIVE · 已连接你的真 agent');
-          if (s === 'disconnected') kbd.setLcd('断线了，重连中…（灯保持最后状态）');
+          if (s === 'connected') kbd.setLcd(t('live.connected'));
+          if (s === 'disconnected') kbd.setLcd(t('live.disconnected'));
         },
       });
     } else {
@@ -244,10 +250,10 @@
           if (state === 'needs_input') haptic('alert');
         },
         onLcd(text) { kbd.setLcd(text); },
-        onFocus(slotId) { kbd.flashLcd(`焦点 → agent ${slotId}`); },
+        onFocus(slotId) { kbd.flashLcd(t('agent.focusArrowDemo', { slotId })); },
       });
       director.start();
-      kbd.setLcd("LET'S BUILD — demo 上电，agent 们开工了");
+      kbd.setLcd(t('demo.boot'));
     }
   </script>
 </body>

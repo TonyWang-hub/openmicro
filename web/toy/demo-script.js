@@ -12,6 +12,8 @@
 
 /** @typedef {'idle'|'thinking'|'complete'|'needs_input'|'error'} DemoState */
 
+import { t } from './i18n.js';
+
 const SLOT_COUNT = 6;
 
 const INITIAL_DELAY_MIN_MS = 500;
@@ -23,34 +25,10 @@ const ERROR_MS = 1500;
 const NEEDS_INPUT_TIMEOUT_MS = 20000;
 const NEEDS_INPUT_PROBABILITY = 0.3;
 
-// 四组 LCD 文案（needs_input 喊话 / 感谢 / 吐槽 / 语音派活任务名），合计 ≥12 条。
-const NEEDS_INPUT_PROMPTS = [
-  'agent 3 想 rm -rf node_modules，批吗？',
-  'agent 5 声称找到了祖传 bug 的老巢，要不要放行？',
-  '有个 agent 想直接 push 到 main，你说了算',
-  'agent 请求生成 1024 个测试文件，确认？',
-];
-
-const THANK_YOU_MESSAGES = [
-  '多谢老板签字，继续搬砖',
-  '感谢批准，这就开工',
-  '老板英明，任务已确认',
-  '收到许可，马力全开',
-];
-
-const COMPLAIN_MESSAGES = [
-  '被拒了，agent 小声嘀咕了一句脏话',
-  '行吧，那我摆烂了',
-  '老板不批，agent 决定原地生闷气',
-  '被打回重做，心态崩了一下下',
-];
-
-const VOICE_TASKS = [
-  '去祖传代码里考古',
-  '给生产环境降降速',
-  '写一份没人看的文档',
-  '追杀那个偶发的 flaky test',
-];
+// 四组 LCD 文案（needs_input 喊话 / 感谢 / 吐槽 / 语音派活任务名，各 en/zh 4 条，
+// 见 i18n.js 的 demo.needsInputPrompts / demo.thankYouMessages /
+// demo.complainMessages / demo.voiceTasks）。不缓存到模块顶层常量，每次现取
+// 是为了让运行时切换语言（setLang）立刻生效。
 
 function pick(list) {
   return list[Math.floor(Math.random() * list.length)];
@@ -112,7 +90,7 @@ export function createDemoDirector({ onState = noop, onLcd = noop, onFocus = noo
   function handleSlotError(slotId) {
     // 引擎主循环异常兜底：LCD 提示后自动重启该 slot 的生活线。
     try {
-      onLcd('重新上电…');
+      onLcd(t('demo.engineRestart'));
     } catch (_err) {
       // onLcd 本身抛错也不应该拖垮引擎
     }
@@ -142,7 +120,7 @@ export function createDemoDirector({ onState = noop, onLcd = noop, onFocus = noo
 
   function enterNeedsInput(slotId) {
     setState(slotId, 'needs_input');
-    onLcd(pick(NEEDS_INPUT_PROMPTS));
+    onLcd(pick(t('demo.needsInputPrompts')));
     setSlotTimer(slotId, NEEDS_INPUT_TIMEOUT_MS, () => {
       // 20s 无人理会：玩具不惩罚不理睬，自动 complete。
       enterComplete(slotId);
@@ -151,13 +129,13 @@ export function createDemoDirector({ onState = noop, onLcd = noop, onFocus = noo
 
   function enterComplete(slotId, { thank = false } = {}) {
     setState(slotId, 'complete');
-    if (thank) onLcd(pick(THANK_YOU_MESSAGES));
+    if (thank) onLcd(pick(t('demo.thankYouMessages')));
     setSlotTimer(slotId, COMPLETE_MS, () => backToIdle(slotId));
   }
 
   function enterError(slotId) {
     setState(slotId, 'error');
-    onLcd(pick(COMPLAIN_MESSAGES));
+    onLcd(pick(t('demo.complainMessages')));
     setSlotTimer(slotId, ERROR_MS, () => backToIdle(slotId));
   }
 
@@ -204,7 +182,7 @@ export function createDemoDirector({ onState = noop, onLcd = noop, onFocus = noo
     if (!slot) return;
     safeRun(slotId, () => {
       setState(slotId, 'thinking');
-      onLcd(`语音已派活：${pick(VOICE_TASKS)}`);
+      onLcd(t('demo.voicePrefix', { task: pick(t('demo.voiceTasks')) }));
       const duration = randomRange(THINKING_MIN_MS, THINKING_MAX_MS);
       setSlotTimer(slotId, duration, () => resolveThinking(slotId));
     });

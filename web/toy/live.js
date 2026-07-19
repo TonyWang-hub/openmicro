@@ -1,3 +1,5 @@
+import { t } from './i18n.js';
+
 /**
  * Live mode wiring — consumes the host's existing WS protocol (spec §5).
  * Reconnects with exponential backoff capped at 30s (spec §6).
@@ -127,9 +129,9 @@ export function connectLive({ token, onState, onLcd, onConnection }) {
       sendRaw(cmd.action, cmd.slotId, cmd.text);
       sent += 1;
     }
-    if (sent && dropped) onLcd(`补发 ${sent} 条离线指令，${dropped} 条已超时丢弃`);
-    else if (sent) onLcd(`补发 ${sent} 条离线指令`);
-    else if (dropped) onLcd(`${dropped} 条离线指令已超时丢弃（未补发）`);
+    if (sent && dropped) onLcd(t('live.replayedAndDropped', { sent, dropped }));
+    else if (sent) onLcd(t('live.replayedOnly', { n: sent }));
+    else if (dropped) onLcd(t('live.droppedOnly', { n: dropped }));
   }
 
   connect();
@@ -141,7 +143,7 @@ export function connectLive({ token, onState, onLcd, onConnection }) {
       } else {
         queue.push({ action, slotId, text, ts: Date.now() });
         saveQueue();
-        onLcd(`离线，已排队 ${queue.length} 条，连上补发`);
+        onLcd(t('live.queuedOffline', { n: queue.length }));
       }
     },
     close() {

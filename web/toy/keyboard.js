@@ -1,3 +1,5 @@
+import { t } from './i18n.js';
+
 /**
  * 1:1 toy keyboard component.
  * Renders the device into `root`, owns pointer interaction + light classes.
@@ -70,11 +72,13 @@ export function createToyKeyboard({ root, handlers = {} }) {
           </div>
         </div>
       </div>
-      <div class="toy-rotate-hint">竖屏体验最佳 · rotate for best fit</div>
+      <div class="toy-rotate-hint" data-rotate-hint></div>
     </div>`;
 
   const $ = (sel) => root.querySelector(sel);
   const agents = [...root.querySelectorAll('[data-agent]')];
+
+  $('[data-rotate-hint]').textContent = t('keyboard.rotateHint');
 
   // --- scale device to viewport width (540px design width, spec §4) ---
   const DESIGN_W = 540;
