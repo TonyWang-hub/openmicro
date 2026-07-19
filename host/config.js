@@ -3,7 +3,7 @@ import os from 'node:os';
 import { parseAllowedOrigins } from './security.js';
 
 // Default per-agent accept/reject key sequences. Verified 2026-07-17 against
-// the real TUIs (see docs/specs keymap-calibration note):
+// the real TUIs (see the keymap-calibration note):
 //   claude-code permission dialog: "❯ 1. Yes / 2. … / 3. No" — press "1" to
 //     accept, Esc to cancel. Single "1", no Enter (arrow-menu, not a text field).
 //   codex approval dialog: "1. Yes, proceed (y) / 2. … (p) / 3. No … (esc)" —

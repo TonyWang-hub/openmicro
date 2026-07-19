@@ -3,7 +3,7 @@ import { t } from './i18n.js';
 /**
  * 1:1 toy keyboard component.
  * Renders the device into `root`, owns pointer interaction + light classes.
- * Layout per the device reference (spec §0 布局铁律):
+ * Layout per the device's real top-view reference (spec §0 布局铁律):
  *   R1: knob | agent0 | agent1 | joystick
  *   R2: agent2 | agent3 | agent4 | agent5
  *   R3: ⚡ quick | ◎✓ accept | ⊗ reject | ⤴ branch

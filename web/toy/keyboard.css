@@ -1,6 +1,6 @@
 /*
  * 1:1 toy keyboard — ported from docs/design/simulator-v6-mockup.html (v6 定稿)
- * against the device reference.
+ * against the device's real top-view reference.
  * Device is laid out at a fixed 540px design width; .toy-scale gets a
  * JS-computed --scale so the machine fills the phone width losslessly.
  * Light states: a-idle | a-thinking | a-complete | a-needs_input | a-error

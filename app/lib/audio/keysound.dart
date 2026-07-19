@@ -1,5 +1,5 @@
 /// Mechanical-keyboard sound engine for the pointer/keyboard rig (see
-/// docs/specs/2026-07-18-native-app.md § 音效).
+/// the native-app design notes § 音效).
 ///
 /// Design: all click/tick/chirp sounds are **synthesized at runtime as raw
 /// 16-bit PCM mono WAV byte buffers** (see [_synthesize], [_synthChirp],

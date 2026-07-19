@@ -1,5 +1,5 @@
 /// WebSocket Live client — connects to the Host WS contract described in
-/// docs/specs/2026-07-18-native-app.md ("复用的 Host 契约"):
+/// the native-app design notes ("复用的 Host 契约"):
 ///
 ///   `ws://<host>:<port>/?token=<token>`
 ///   recv: {type:'state', slots:[{slotId,label,state,cmuxTarget,tmuxTarget}]}

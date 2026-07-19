@@ -122,7 +122,7 @@ store.dropSlot(slotId)   ← 把已消失的会话从灯位上摘掉，而不是
 
 ## 4. 关键设计决策
 
-1. **B+C 接线：tmux 管生命周期/终端 I/O，官方 hooks/notify/app-server 事件唯一决定灯色**（`docs/specs/2026-07-17-wiring-b-plus-c.md`）。两条通道职责正交、互不越界：tmux 通道绝不推断灯色，事件通道绝不替代终端 I/O。这是为了避免"灯从屏幕文字猜"这种脆弱且容易误判的方案。
+1. **B+C 接线：tmux 管生命周期/终端 I/O，官方 hooks/notify/app-server 事件唯一决定灯色**。两条通道职责正交、互不越界：tmux 通道绝不推断灯色，事件通道绝不替代终端 I/O。这是为了避免"灯从屏幕文字猜"这种脆弱且容易误判的方案。
 2. **hook 转发脚本 fire-and-forget，且前台执行而非后台**（`scripts/cms-hook-forward.sh`）：`curl --max-time 3` 前台跑、任何失败吞掉、永远 `exit 0`。曾尝试过"`&` + `disown` 后台化"，但在 hook 执行上下文里探测到脚本退出时后台 curl 会被提前回收、事件根本发不出去，因此改回前台——由于 Host 恒为本机 loopback（~5ms 往返）且有超时上限，前台等待不会有感知延迟。
 3. **显式聚焦防误注入**：accept/reject/quick/prompt/branch 一律只作用于用户点选的那个槽；这个守卫目前实现在**前端**（`web/m.html`、`app/lib/main.dart` 在发送前检查本地 `focusedSlot`），Host 侧的 `handleFocus` 只是记录并广播 `focusedSlotId`，并不会拿它去校验后续 `handleCommand` 请求的 `slotId` 是否与当前聚焦一致——也就是说安全边界目前是"UI 约定"而非"服务端强制"，这是有意的 MVP 取舍（同一 spec 里写明"UI 守卫，同一期"），但意味着一个绕过前端直接发 WS 消息的客户端可以指定任意 `slotId`。
 4. **死槽自动清理**：两处协同——`resolveSession` 在 6 槽占满时按 LRU 淘汰空闲槽（`needs_input` 受保护）；`command-router.js` 在 cmux/tmux 注入报错匹配 `not found`/`no such`/`unknown surface|pane|session` 时直接 `store.dropSlot`，把已经关闭终端的会话从灯位上摘掉，避免它占着槽位持续报错。
@@ -133,4 +133,4 @@ store.dropSlot(slotId)   ← 把已消失的会话从灯位上摘掉，而不是
 
 1. **App 键音播放尚未真正接通**：`app/lib/audio/keysound.dart` 已实现完整的 PCM/WAV 合成逻辑（`_synthesize`/`_synthChirp`/`_encodeWav`），但负责"播放"的 `_play` 目前是一个**空实现占位符**——即使 `pubspec.yaml` 已声明 `audioplayers` 依赖，声音合成出来后并没有真正调用播放 API。原生 App spec 的里程碑 M3（"体感 + 音效"）据此尚未完全达成。
 2. **Codex app-server 增强路径没有真实 transport**：`host/adapters/codex-app-server.js` 的默认 `createTransport`（`defaultCreateTransport`）会直接 `throw new Error('no app-server transport configured')`；也就是说即便设置 `CMS_CODEX_APP_SERVER=1`，`main()` 里调用 `createCodexAppServerIngest` 时并未传入真实的 `createTransport` 实现，实际效果只是打一条 `connect failed` 的 warn 日志，功能不生效（除非调用方/测试显式注入 transport）。
-3. **`scripts/install-hooks.md` 的 Claude Code 示例仍是旧的"静态绑定"写法**：文档表格把 `CMS_SESSION_KEY` 标为"必填"，命令片段里写死 `CMS_SESSION_KEY=cms-claude-0`；但 2026-07-18 上线的全局自动分槽设计（`docs/specs/2026-07-18-auto-slot-assignment.md`）里 `CMS_SESSION_KEY` 只是**当 stdin 没有 `session_id` 时的兜底**（Claude Code 官方 hook stdin 总是带 `session_id`，因此正常情况下用不到它）。`scripts/install-hooks.md` 本身不在本次文档任务的可改范围内，这里仅记录该文档尚未随新设计更新。
+3. **`scripts/install-hooks.md` 的 Claude Code 示例仍是旧的"静态绑定"写法**：文档表格把 `CMS_SESSION_KEY` 标为"必填"，命令片段里写死 `CMS_SESSION_KEY=cms-claude-0`；但 2026-07-18 上线的全局自动分槽设计里 `CMS_SESSION_KEY` 只是**当 stdin 没有 `session_id` 时的兜底**（Claude Code 官方 hook stdin 总是带 `session_id`，因此正常情况下用不到它）。`scripts/install-hooks.md` 本身不在本次文档任务的可改范围内，这里仅记录该文档尚未随新设计更新。

@@ -30,7 +30,7 @@ A clear and concise description of any alternative solutions or features you've 
 
 ## Additional context
 
-Add any other context, mockups, or references here — e.g. related design docs under `docs/specs/` or `docs/design/`.
+Add any other context, mockups, or references here — e.g. related design docs under `docs/design/`.
 
 ## Environment (if relevant to the request)
 

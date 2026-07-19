@@ -9,7 +9,7 @@ import 'package:openmicro/net/live_client.dart';
 
 /// Minimal fake Host: a plain [HttpServer] that upgrades every request to a
 /// WebSocket, mirroring the toy Host's `ws://<host>:<port>/?token=<token>`
-/// contract from docs/specs/2026-07-18-native-app.md.
+/// contract from the native-app design notes.
 class FakeHost {
   FakeHost(this._server) {
     _sub = _server.listen((request) async {

@@ -99,7 +99,7 @@ docker compose up --build
 
 ## 核心概念
 
-- **自动认领槽（session_id 自动分配）**：Claude Code / Codex 的 hook 事件自带 `session_id`（会话唯一 UUID）和 `cwd`。Host 首次见到某个 `session_id` 就自动占用一个空槽（`slotId` 0–5）；6 槽占满后按 LRU 淘汰最久未活跃的空闲槽（`needs_input` 受保护，尽量不淘汰）。不再需要每个项目手动绑定 `sessionKey`。详见 `docs/specs/2026-07-18-auto-slot-assignment.md`。
+- **自动认领槽（session_id 自动分配）**：Claude Code / Codex 的 hook 事件自带 `session_id`（会话唯一 UUID）和 `cwd`。Host 首次见到某个 `session_id` 就自动占用一个空槽（`slotId` 0–5）；6 槽占满后按 LRU 淘汰最久未活跃的空闲槽（`needs_input` 受保护，尽量不淘汰）。不再需要每个项目手动绑定 `sessionKey`。
 - **cmux/tmux 注入**：灯效永远只由官方 hooks/notify 事件驱动（**绝不**从终端文本推断）；而"远程按键"（accept/reject/语音派活）需要把按键真的发回那个会话的终端——这要求该会话跑在 **tmux**（`tmux send-keys`）或 **cmux**（用户实际使用的 GUI 多路终端，`cmux send` / `send-key --surface`）里。两者都不在，就只能看灯，按键会提示"不在 tmux/cmux，无法远程按键"。两者都在时优先 cmux（真实 TUI 所在处）。
 - **显式聚焦安全**：命令键（◎✓ accept / ⊗ reject / ⚡ quick / 🎙 语音）只作用于用户**显式点选**的那个 Agent 灯，绝不自动挑选——防止误注入到错误的会话或对话窗口。这条规则由网页/App 前端在发送指令前保证（点一盏灯才允许发命令），完整契约见 [docs/COMMANDS.md](docs/COMMANDS.md)。
 
@@ -116,17 +116,16 @@ WS 命令契约（各 action 的载荷/行为/失败路径）见 **[docs/COMMAND
 
 ## 状态
 
-MVP 接线（tmux 会话生命周期 + 官方事件灯效，即 spec 里的 "B+C" 方案）已落地并自动化验证。玩具 Demo/Live 双模式、全局 hooks 自动分槽、cmux 注入 adapter、原生 Flutter App 均已实现。二期（语音派活 + 扫码配对 + 新会话/分叉的真实注入）已完成 Host 侧接线，详见 `docs/specs/2026-07-19-phase2.md`。
+MVP 接线（tmux 会话生命周期 + 官方事件灯效，即 spec 里的 "B+C" 方案）已落地并自动化验证。玩具 Demo/Live 双模式、全局 hooks 自动分槽、cmux 注入 adapter、原生 Flutter App 均已实现。二期（语音派活 + 扫码配对 + 新会话/分叉的真实注入）已完成 Host 侧接线。
 
-## 相关调研 / 同源项目
+## 相关 / 同源项目
 
-- 硬件调研：my-project `internal-research`（核验结论：真机智能全在 ChatGPT 桌面 App，因此纯软件可复刻；开源同类：amux / CloudCLI UI / agent-dashboard / Tactic Remote）
-- 同源项目：my-project `notes/internal-project/`（`codex app-server` 事件流客户端可复用件，本项目的 codex app-server 可选增强路径正是从那里借鉴）
+- 定位判断：真机 Codex Micro 的"智能"全在 ChatGPT 桌面 App 里，硬件只是 HID 键盘 + RGB 灯——因此纯软件（Host + 网页/App）足以复刻同样的交互。
+- 开源同类可参考：amux、CloudCLI UI、agent-dashboard、Tactic Remote 等。
 
 ## 文档索引
 
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — 数据流、命令回程、模块清单、关键设计决策
 - **[docs/DEPLOY.md](docs/DEPLOY.md)** — Host 部署 env、hooks 安装/卸载、网页访问、App 构建
 - **[docs/COMMANDS.md](docs/COMMANDS.md)** — WS 命令契约表、ingest 事件格式、五色灯态映射
-- `docs/specs/` — 各阶段设计 spec（原始决策记录，不做面向新读者的整理）
 - `docs/design/` — 外观定稿的可交互 HTML 稿（`simulator-v6-mockup.html` 键盘本体、`layout-v2-hifi-mockup.html` 桌面布局）
