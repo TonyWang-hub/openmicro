@@ -235,7 +235,7 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
   List<SlotState> _slots = const [];
   int? _focused;
   String _reasoning = 'MED';
-  late String _lcd;
+  String _lcd = '';
   LiveConnection _conn = LiveConnection.connecting;
 
   // Detects a socket that connects fine but never actually streams a
@@ -252,7 +252,6 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
   @override
   void initState() {
     super.initState();
-    _lcd = _l10n.lcdConnecting;
     _initSpeech();
     _client = LiveClient(
       host: widget.target.host,
@@ -293,6 +292,18 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
       }),
     );
     _client.connect();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // l10n access must happen here, not in initState: AppLocalizations.of does
+    // dependOnInheritedWidgetOfExactType, illegal before initState completes —
+    // it crashes on the auto-connect (PAIR_URL) launch path where KeyboardScreen
+    // is the first route. Set the initial LCD once; connection events overwrite it.
+    if (_lcd.isEmpty) {
+      _lcd = _l10n.lcdConnecting;
+    }
   }
 
   Future<void> _initSpeech() async {
