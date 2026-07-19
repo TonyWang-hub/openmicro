@@ -1,6 +1,8 @@
 # Hook 安装指南
 
 > **重要：本工具不会自动修改你的配置文件。** 请手动复制下方片段到对应位置，并确认路径与环境变量正确。
+>
+> **⚠️ 推荐读 [../docs/DEPLOY.md](../docs/DEPLOY.md) 的"全局 hooks"章节**：当前是**自动认领槽**设计——转发脚本从 Claude Code hook 的 stdin 读 `session_id` 自动分配灯位，**无需再手配 `CMS_SESSION_KEY`**（Claude Code 官方 hook payload 总是带 session_id）。下面示例里写死的 `CMS_SESSION_KEY=cms-claude-0` 是旧的静态绑定用法，仅在 stdin 缺 session_id 时作 fallback；日常全局安装可省略它。
 
 `cms-hook-forward.sh` 依赖 `jq` 与 `curl`。将脚本加入 `PATH`，或在片段中使用绝对路径。
 
@@ -11,7 +13,7 @@
 | 变量 | 必填 | 说明 |
 |---|---|---|
 | `CMS_HOOK_AGENT` | 是 | `claude-code` 或 `codex` |
-| `CMS_SESSION_KEY` | 是 | 与 CMS 槽位绑定的 sessionKey，如 `cms-claude-0` |
+| `CMS_SESSION_KEY` | 否（fallback） | 仅当 stdin 无 `session_id` 时的兜底 sessionKey；自动认领槽下无需设置 |
 | `CMS_HOOK_CHANNEL` | 否 | 默认 `hooks`；legacy notify 用 `notify-legacy` |
 | `CMS_PORT` | 否 | CMS Host 端口，默认 `7788` |
 
