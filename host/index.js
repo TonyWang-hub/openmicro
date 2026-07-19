@@ -433,6 +433,14 @@ async function main() {
         return;
       }
 
+      // Serve the service worker from the ROOT path with Service-Worker-Allowed: /
+      // so its scope can cover /m (a worker at /toy/sw.js could only claim
+      // /toy/). Same file, just reachable at the root so PWA offline works.
+      if (pathname === '/sw.js') {
+        sendFile(path.join(WEB_DIR, 'toy', 'sw.js'), res, { 'service-worker-allowed': '/' });
+        return;
+      }
+
       serveStatic(req, res);
       return;
     }

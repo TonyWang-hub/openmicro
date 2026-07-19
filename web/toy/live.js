@@ -15,6 +15,38 @@ export function connectLive({ token, onState, onLcd, onConnection }) {
    * after first event; before that we keep the idle default per spec §4). */
   const STATE_OK = new Set(['idle', 'thinking', 'complete', 'needs_input', 'error']);
 
+  // --- Offline command queue (amux-style) ---
+  // Commands sent while disconnected (no OPEN socket) are queued instead of
+  // dropped, and replayed in order once the socket reconnects. Each entry
+  // carries a timestamp: approvals/rejections in particular can go stale
+  // (the agent state they targeted may no longer exist by the time we
+  // reconnect), so any entry older than QUEUE_MAX_AGE_MS at flush time is
+  // dropped with a notice rather than blindly replayed. Persisted to
+  // localStorage (namespaced by token) so a page reload while offline
+  // doesn't silently lose queued commands.
+  const QUEUE_MAX_AGE_MS = 60000;
+  const QUEUE_KEY = `cms-toy-offline-queue:${token}`;
+
+  function loadQueue() {
+    try {
+      const raw = localStorage.getItem(QUEUE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveQueue() {
+    try {
+      if (queue.length === 0) localStorage.removeItem(QUEUE_KEY);
+      else localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+    } catch { /* ignore (private mode / quota) */ }
+  }
+
+  /** @type {Array<{ action: string, slotId: number, text?: string, ts: number }>} */
+  let queue = loadQueue();
+
   let ws = null;
   let closed = false;
   let attempt = 0;
@@ -34,6 +66,7 @@ export function connectLive({ token, onState, onLcd, onConnection }) {
       attempt = 0;
       onConnection('connected');
       ws.send(JSON.stringify({ type: 'subscribe' }));
+      flushQueue();
     };
 
     ws.onmessage = (ev) => {
@@ -66,16 +99,49 @@ export function connectLive({ token, onState, onLcd, onConnection }) {
     };
   }
 
+  /** Send one command straight to the wire (assumes OPEN); used by both the
+   * live path and queue replay so there's a single wire-format source. */
+  function sendRaw(action, slotId, text) {
+    const payload = { action, slotId };
+    if (text != null) payload.text = text;
+    ws.send(JSON.stringify({ type: 'command', payload }));
+  }
+
+  /** Replay queued commands in order once reconnected; drop anything past
+   * QUEUE_MAX_AGE_MS (e.g. an accept/reject whose target state has since
+   * moved on) instead of firing it stale. */
+  function flushQueue() {
+    if (queue.length === 0) return;
+    if (ws?.readyState !== WebSocket.OPEN) return;
+    const pending = queue;
+    queue = [];
+    saveQueue();
+    const now = Date.now();
+    let sent = 0;
+    let dropped = 0;
+    for (const cmd of pending) {
+      if (now - cmd.ts > QUEUE_MAX_AGE_MS) {
+        dropped += 1;
+        continue;
+      }
+      sendRaw(cmd.action, cmd.slotId, cmd.text);
+      sent += 1;
+    }
+    if (sent && dropped) onLcd(`补发 ${sent} 条离线指令，${dropped} 条已超时丢弃`);
+    else if (sent) onLcd(`补发 ${sent} 条离线指令`);
+    else if (dropped) onLcd(`${dropped} 条离线指令已超时丢弃（未补发）`);
+  }
+
   connect();
 
   return {
     sendCommand(action, slotId, text) {
       if (ws?.readyState === WebSocket.OPEN) {
-        const payload = { action, slotId };
-        if (text != null) payload.text = text;
-        ws.send(JSON.stringify({ type: 'command', payload }));
+        sendRaw(action, slotId, text);
       } else {
-        onLcd('未连接：指令没发出去');
+        queue.push({ action, slotId, text, ts: Date.now() });
+        saveQueue();
+        onLcd(`离线，已排队 ${queue.length} 条，连上补发`);
       }
     },
     close() {

@@ -3,6 +3,7 @@
   "short_name": "MicroToy",
   "description": "A pocket replica of a certain sold-out $230 agent macropad. Works with Claude Code too.",
   "start_url": "/m",
+  "scope": "/m",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#e9eaee",
