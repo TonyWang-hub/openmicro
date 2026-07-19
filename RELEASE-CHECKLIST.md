@@ -15,9 +15,9 @@
 
 ## 🚀 你要手动做的（按序）
 
-1. **确定 GitHub 命名空间**，替换 `CHANGELOG.md` 里的 `YOUR-GITHUB-ORG` token（第 28-29 行的对比链接）：
+1. **确定 GitHub 命名空间**，替换 `CHANGELOG.md` 里的 `TonyWang-hub` token（第 28-29 行的对比链接）：
    ```bash
-   sed -i '' 's/YOUR-GITHUB-ORG/<你的github用户名或org>/g' CHANGELOG.md
+   sed -i '' 's/TonyWang-hub/<你的github用户名或org>/g' CHANGELOG.md
    git commit -am 'docs: fill changelog compare links'
    ```
 2. **在 GitHub 建空的公开仓** `openmicro`（不要勾选自动生成 README/LICENSE，避免首推冲突）。
@@ -28,9 +28,9 @@
    git push -u origin main
    ```
 4. **（可选）本地目录改名** `codex-micro-sim` → `openmicro`：会让 `app/ios/Flutter/flutter_export_environment.sh` 等生成文件的绝对路径失效，改完在 `app/` 跑一次 `flutter pub get` + `flutter clean` 重生成即可。
-5. **开 GitHub Pages（live demo）**：Settings → Pages → Source 选 **GitHub Actions**。首推后 `Deploy demo to GitHub Pages` workflow 会自动构建 `web/` 的 Demo 模式并发布到 `https://<你>.github.io/openmicro/`。然后把 `README.md` 里的 `YOUR-GITHUB` 占位换成你的命名空间：
+5. **开 GitHub Pages（live demo）**：Settings → Pages → Source 选 **GitHub Actions**。首推后 `Deploy demo to GitHub Pages` workflow 会自动构建 `web/` 的 Demo 模式并发布到 `https://<你>.github.io/openmicro/`。然后把 `README.md` 里的 `TonyWang-hub` 占位换成你的命名空间：
    ```bash
-   sed -i '' 's#YOUR-GITHUB#<你的github用户名>#g' README.md && git commit -am 'docs: fill live demo url'
+   sed -i '' 's#TonyWang-hub#<你的github用户名>#g' README.md && git commit -am 'docs: fill live demo url'
    ```
    本地想先看产物：`npm run build:demo` → 用任意静态服务器打开 `demo-dist/`（Demo 模式零后端）。
 6. **仓库 About**：填一句 tagline + 在 Security policy 里确认 GitHub Security Advisories 已开（`SECURITY.md` 指向它）。

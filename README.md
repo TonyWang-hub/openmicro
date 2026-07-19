@@ -6,7 +6,7 @@
 
 > **Inspired by, not affiliated with, the sold-out $230 "Codex Micro" agent macropad.** OpenMicro is an independent, open-source *software* reimagining of that interaction — it is **not** an OpenAI or Work Louder product and ships no hardware. "Codex" and "Codex Micro" are marks of their respective owners. The code keeps an internal `cms` prefix for historical reasons; it has no bearing on the public name.
 
-**▶︎ Live demo (no install, no backend): https://YOUR-GITHUB.github.io/openmicro/** — the phone keyboard in Demo mode with fake agents acting out the lights/approvals. Best opened on a phone. _(Published by the "Deploy demo to GitHub Pages" workflow once you push; replace `YOUR-GITHUB` with your namespace.)_
+**▶︎ Live demo (no install, no backend): https://TonyWang-hub.github.io/openmicro/** — the phone keyboard in Demo mode with fake agents acting out the lights/approvals. Best opened on a phone. _(Published by the "Deploy demo to GitHub Pages" workflow once you push.)_
 
 <p align="center">
   <img src="docs/media/openmicro-web-demo.gif" width="320" alt="OpenMicro web demo — 6 lights tracking fake agent sessions, tap to approve/reject" />
