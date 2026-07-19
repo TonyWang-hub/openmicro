@@ -237,8 +237,18 @@ class DeviceKeyboard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        Text('REASONING · $reasoning',
-            style: const TextStyle(fontSize: 6.5, color: Color(0xFF6B7280), letterSpacing: 0.5)),
+        // Constrain to the key width + scale down so a long label like
+        // "REASONING · XHIGH" never overflows the 64px column (was a 16px
+        // RenderFlex overflow under test font metrics).
+        SizedBox(
+          width: _keySize,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text('REASONING · $reasoning',
+                maxLines: 1,
+                style: const TextStyle(fontSize: 6.5, color: Color(0xFF6B7280), letterSpacing: 0.5)),
+          ),
+        ),
       ]),
     );
   }
