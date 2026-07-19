@@ -8,6 +8,12 @@
 
 **▶︎ Live demo (no install, no backend): https://YOUR-GITHUB.github.io/openmicro/** — the phone keyboard in Demo mode with fake agents acting out the lights/approvals. Best opened on a phone. _(Published by the "Deploy demo to GitHub Pages" workflow once you push; replace `YOUR-GITHUB` with your namespace.)_
 
+<p align="center">
+  <img src="docs/media/openmicro-web-demo.gif" width="320" alt="OpenMicro web demo — 6 lights tracking fake agent sessions, tap to approve/reject" />
+  <br/>
+  <em>Demo 模式：6 盏灯实时演示 agent 会话状态，按键审批、语音派活。</em>
+</p>
+
 ## 一句话定位
 
 真机 Codex Micro 只是一个 USB/蓝牙 HID 键盘 + RGB 灯，智能全在 ChatGPT 桌面 App 里；本项目用纯软件（Host 服务 + 网页/原生 App）复刻同样的体验：**6 盏灯实时反映你本机每个 agent 会话的状态，按键直接把 accept/reject/语音指令注入回那个真实会话**。
@@ -28,6 +34,21 @@
 | **原生 App** | `app/`（Flutter） | 安卓/iOS 通用 | 网页版体感升级：真实触感（CoreHaptics/VibrationEffect）、合成机械键音、扫码配对、语音转文字派活；复用同一个 Host，Host 一行不改 |
 
 详细架构、模块清单、关键设计决策见 **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**。
+
+## 界面预览
+
+<table>
+<tr>
+<td align="center"><b>网页 Demo（浏览器 · 假 agent 演示）</b></td>
+<td align="center"><b>原生 App（iOS/Android · 拟物触感）</b></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/media/openmicro-web-lights.png" width="300" alt="Web demo：6 键点亮为 THINKING/NEEDS INPUT 等状态" /></td>
+<td align="center"><img src="docs/media/openmicro-ios-keyboard.png" width="300" alt="原生 App 的拟物遥控键盘（iOS 模拟器）" /></td>
+</tr>
+</table>
+
+> 动图见顶部；`docs/media/openmicro-web-demo.mp4` 是更轻量（254KB）的社交版。App 截图为 Live 模式未连 Host 的静态态（键位空档、灯未点亮）。
 
 ## 快速开始
 
