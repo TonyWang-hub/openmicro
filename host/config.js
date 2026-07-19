@@ -1,5 +1,6 @@
 import path from 'node:path';
 import os from 'node:os';
+import { parseAllowedOrigins } from './security.js';
 
 // Default per-agent accept/reject key sequences. Verified 2026-07-17 against
 // the real TUIs (see docs/specs keymap-calibration note):
@@ -75,5 +76,23 @@ export function loadConfig(env = process.env) {
     // running agent). Default: no static pre-binding. A pinned binding can
     // still be added here if a fixed slot is ever wanted.
     slots: [],
+    // Origin allowlist for non-loopback HTTP/WS requests. Empty (default) =
+    // unrestricted, so LAN-direct-connect and non-browser clients (hooks,
+    // curl) keep working unchanged. Set CMS_ALLOWED_ORIGINS to a
+    // comma-separated list (e.g. "http://192.168.1.5:7788") to opt in.
+    allowedOrigins: parseAllowedOrigins(env.CMS_ALLOWED_ORIGINS),
+    // Simple per-IP sliding-window rate limits. Loopback is always exempt.
+    // `max <= 0` disables a given limiter (opt-out). Defaults are generous
+    // so they never fire under normal single-user LAN usage.
+    rateLimit: {
+      ingest: {
+        windowMs: Number(env.CMS_INGEST_RATE_LIMIT_WINDOW_MS || 60_000),
+        max: Number(env.CMS_INGEST_RATE_LIMIT_MAX ?? 600),
+      },
+      wsCommand: {
+        windowMs: Number(env.CMS_WS_COMMAND_RATE_LIMIT_WINDOW_MS || 60_000),
+        max: Number(env.CMS_WS_COMMAND_RATE_LIMIT_MAX ?? 120),
+      },
+    },
   };
 }

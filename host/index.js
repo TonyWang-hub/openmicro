@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { loadConfig } from './config.js';
 import { createAuth, isLoopbackAddress } from './auth.js';
+import { createRateLimiter, isOriginAllowed, isNonLoopbackHost } from './security.js';
 import { createStore } from './state/agent-state-store.js';
 import { createIngestHandler, createAdapterMapRaw } from './ingest/http-ingest.js';
 import {
@@ -224,9 +225,24 @@ async function main() {
   const config = loadConfig();
   ensureWebPlaceholder();
 
+  // Boot-time safety check: an open (non-loopback) bind with no operator-
+  // supplied token means anyone on the network gets in via the auto-random
+  // token printed to this console only — flag it loudly. Behavior is
+  // unchanged (a random token is still generated below); this is purely a
+  // diagnostic so an operator doesn't accidentally expose the Host.
+  if (isNonLoopbackHost(config.host) && !config.token) {
+    console.warn('!'.repeat(60));
+    console.warn(`[cms] 警告: CMS_HOST=${config.host} 对外开放，但未设置 CMS_TOKEN。`);
+    console.warn('[cms] 将自动生成随机 token；若非预期，请立即设置 CMS_TOKEN 或改回 127.0.0.1。');
+    console.warn('!'.repeat(60));
+  }
+
   if (!config.token) {
     config.token = crypto.randomBytes(8).toString('hex');
   }
+
+  const ingestLimiter = createRateLimiter(config.rateLimit.ingest);
+  const wsCommandLimiter = createRateLimiter(config.rateLimit.wsCommand);
   const auth = createAuth({ token: config.token });
   const lanIp = detectLanIp();
   const mobileUrl = `http://${lanIp}:${config.port}/m?token=${config.token}`;
@@ -375,6 +391,12 @@ async function main() {
   const server = http.createServer(async (req, res) => {
     const pathname = req.url?.split('?')[0] || '/';
 
+    if (!isOriginAllowed(req, config.allowedOrigins)) {
+      res.writeHead(403);
+      res.end('forbidden origin');
+      return;
+    }
+
     if (pathname === '/api/health') {
       if (!tmuxOk) {
         sendJson(res, 503, { ok: false, tmux: false, error: tmuxError || 'tmux not found' });
@@ -396,6 +418,12 @@ async function main() {
     }
 
     if (pathname === '/ingest/hook') {
+      const remoteAddress = req.socket?.remoteAddress;
+      if (!isLoopbackAddress(remoteAddress) && !ingestLimiter.allow(remoteAddress)) {
+        console.warn(`[cms] rate limit: dropped /ingest/hook from ${remoteAddress}`);
+        sendJson(res, 429, { ok: false, error: 'rate limited' });
+        return;
+      }
       await handleIngest(req, res);
       return;
     }
@@ -452,6 +480,10 @@ async function main() {
   const wss = new WebSocketServer({ noServer: true });
 
   server.on('upgrade', (req, socket, head) => {
+    if (!isOriginAllowed(req, config.allowedOrigins)) {
+      socket.destroy();
+      return;
+    }
     if (!auth.check(req)) {
       socket.destroy();
       return;
@@ -461,7 +493,8 @@ async function main() {
     });
   });
 
-  wss.on('connection', (ws) => {
+  wss.on('connection', (ws, req) => {
+    const remoteAddress = req?.socket?.remoteAddress;
     hub.add(ws);
     hub.send(ws, {
       type: 'ready',
@@ -496,6 +529,11 @@ async function main() {
             flushPendingAttaches();
             break;
           case 'command':
+            if (!isLoopbackAddress(remoteAddress) && !wsCommandLimiter.allow(remoteAddress)) {
+              console.warn(`[cms] rate limit: dropped WS command from ${remoteAddress}`);
+              hub.send(ws, { type: 'error', message: 'rate limited' });
+              break;
+            }
             await router.handleCommand(msg.payload);
             break;
           case 'term_input': {
