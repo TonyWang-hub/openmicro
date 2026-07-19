@@ -34,6 +34,13 @@ npm install
 npm start
 ```
 
+或者一键脚本（检查 node/jq/curl、按需加载 `.env`、缺 `node_modules` 才装依赖、启动并打印配对提示）：
+
+```bash
+cp .env.example .env   # 可选，不改就用内置默认值
+bash scripts/start.sh
+```
+
 浏览器打开 `http://127.0.0.1:7788`（桌面开发面，左键盘 + 右真终端）。Host 默认只监听 `127.0.0.1`；手机要连必须 `CMS_HOST=0.0.0.0` 重启（见 [docs/DEPLOY.md](docs/DEPLOY.md)）。
 
 ### 2. 装全局 hooks（自动跟踪所有 claude/codex 会话）
@@ -51,6 +58,19 @@ npm start
 ```
 
 原生 App（Flutter）：`cd app && flutter run`，进入后粘贴 `/pair` 页给出的配对链接，或直接扫码。构建/真机细节见 [docs/DEPLOY.md](docs/DEPLOY.md#app-构建)。
+
+## Docker
+
+容器版 Host 只适合"只看灯监控、不需要远程按键"的场景（比如放一台常驻小机器上做纯展示）。
+
+```bash
+cp .env.example .env   # 至少固定一个 CMS_TOKEN
+docker compose up --build
+```
+
+局域网访问：`http://<宿主机IP>:7788/m?token=<CMS_TOKEN>&live=1`。
+
+> ⚠️ **边界：容器版只能监控，不能远程按键注入。** accept/reject/语音派活靠 `tmux send-keys` 或 cmux CLI 把按键发回真实会话的终端，而那个 tmux 会话/cmux 进程本来就跑在**宿主机**上——容器里既没有宿主机的 tmux socket，也接触不到宿主机的 cmux 进程。灯效（hooks 事件点亮 6 槽状态机）在容器里完全正常，但点 accept/reject 或语音派活会得到"不在 tmux/cmux，无法远程按键"的提示。需要完整能力（按键注入 + 语音派活），请用上面「快速开始」里的 `scripts/start.sh` 直接在宿主机跑 Host。详见 [Dockerfile](Dockerfile) 顶部注释。
 
 ## 核心概念
 

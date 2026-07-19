@@ -1,0 +1,27 @@
+# docker-compose.yml — codex-micro-sim Host（容器版，只监控，不能远程按键）
+#
+# 边界说明见 Dockerfile 顶部注释：容器里没有宿主机的 tmux/cmux，accept/
+# reject/语音派活会失败，只有灯效监控可用。需要完整能力请用
+# scripts/start.sh 在宿主机跑 Host。
+#
+# 用法：
+#   cp .env.example .env   # 先建好 .env，至少固定一个 CMS_TOKEN
+#   docker compose up --build
+#   局域网访问：http://<宿主机IP>:7788/m?token=<CMS_TOKEN>&live=1
+
+services:
+  host:
+    build: .
+    image: codex-micro-sim-host:local
+    container_name: codex-micro-sim-host
+    env_file:
+      - .env
+    environment:
+      # 覆盖 .env 里可能残留的 CMS_HOST=127.0.0.1：容器内必须监听 0.0.0.0，
+      # 否则下面的端口映射转发不进来（宿主机连的是映射端口）。
+      CMS_HOST: "0.0.0.0"
+    ports:
+      # 局域网内其他设备（手机）通过宿主机 IP:7788 访问；同一局域网 + 携带
+      # .env 里固定的 CMS_TOKEN 才能连（/m 无 token 会被拒并引导去 /pair）。
+      - "7788:7788"
+    restart: unless-stopped

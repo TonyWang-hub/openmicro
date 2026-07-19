@@ -1,0 +1,12 @@
+# 构建 Docker 镜像不需要带进去的内容——瘦身镜像 + 避免把敏感文件(.env)
+# 打进镜像层。容器版 Host 只监控不注入按键，app/（Flutter 原生 App）、
+# docs/（设计文档）跟容器运行完全无关。
+app/
+docs/
+.git
+.github
+.superpowers
+node_modules
+*.md
+.env
+LICENSE
