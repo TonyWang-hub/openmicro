@@ -1,0 +1,48 @@
+{
+    "@@locale": "zh",
+
+    "connectSubtitle": "连接你的 Host",
+    "pairUrlLabel": "配对链接（电脑 /pair 二维码里的地址）",
+    "tokenLabel": "token（若链接里没带）",
+    "parseErrorText": "解析失败：粘贴配对链接（含 ?token=），或填 host:port + token",
+    "connectButton": "连接",
+    "scanButton": "扫码",
+    "connectFooterHint": "手机需与 Host 同一局域网。也可点\"扫码\"直接扫电脑 /pair 页面的二维码。",
+
+    "lcdConnecting": "LIVE · 连接中…",
+    "lcdConnected": "LIVE · 已连接",
+    "lcdNoData": "连上了但没数据 — 检查 Host 是否在跑 / token 是否对",
+    "lcdDisconnectedReconnecting": "断线，重连中…（灯保持）",
+
+    "needsInputAlert": "{name} 需要你 — 选中再按 ◎✓/⊗",
+    "selectedAgent": "已选中 {name}（◎✓/⊗ 只作用于它）",
+    "selectAgentFirstKey": "先点一盏 Agent 灯选中它，再按此键",
+    "acceptSent": "◎✓ 接受 → agent {slot}",
+    "rejectSent": "⊗ 拒绝 → agent {slot}",
+    "quickSent": "⚡ 继续（回车）→ agent {slot}",
+    "newSessionHint": "💭 新会话请在电脑开 claude/codex，会自动上灯",
+    "branchHint": "⤴ 分叉是电脑端操作",
+    "reasoningDisplay": "思考力度显示 {level}（远程只读）",
+    "noActiveAgent": "暂无活跃 agent",
+    "focusMoved": "焦点 → {name}",
+    "scrollTop": "↟ 回到顶部",
+    "scrollLog": "↡ 滚动日志",
+    "selectAgentFirstPtt": "先点一盏 Agent 灯选中它，再按住说话",
+    "speechUnavailable": "语音识别不可用（模拟器或未授权），改用键盘",
+    "recording": "🎙 录音中…",
+    "recordingLive": "🎙 {words}",
+    "didntCatchThat": "没听清",
+    "promptSent": "🎙 已派活：{words}",
+    "touchHint": "触摸：嘀（长按切音色）",
+    "keySoundSwitched": "音色 → {profile}",
+    "keySoundPom": "POM 清脆轴",
+    "keySoundPok": "POK 静音轴",
+
+    "scanTitle": "扫描配对二维码",
+    "scanHint": "对准电脑上 /pair 页面的二维码",
+
+    "bannerConnecting": "连接中…",
+    "bannerDisconnected": "连接断开，重连中…",
+
+    "emptyAgentsHint": "暂无活跃 agent — 在电脑上开 claude/codex 会自动上灯"
+}

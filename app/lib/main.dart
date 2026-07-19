@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+import 'l10n/app_localizations.dart';
 import 'model/slot.dart';
 import 'keyboard/device.dart';
 import 'net/live_client.dart';
@@ -30,6 +32,13 @@ class MicroToyApp extends StatelessWidget {
       title: 'MicroToy',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(useMaterial3: true, brightness: Brightness.light),
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       home: const ConnectScreen(),
     );
   }
@@ -106,7 +115,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
   Future<void> _connect() async {
     final t = parseTarget(_urlCtrl.text, tokenField: _tokenCtrl.text);
     if (t == null) {
-      setState(() => _error = '解析失败：粘贴配对链接（含 ?token=），或填 host:port + token');
+      setState(() => _error = AppLocalizations.of(context)!.parseErrorText);
       return;
     }
     final p = await SharedPreferences.getInstance();
@@ -132,6 +141,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: const Color(0xFFEDEEF2),
       body: SafeArea(
@@ -146,17 +156,17 @@ class _ConnectScreenState extends State<ConnectScreen> {
                   style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  '连接你的 Host',
-                  style: TextStyle(color: Colors.black54),
+                Text(
+                  l10n.connectSubtitle,
+                  style: const TextStyle(color: Colors.black54),
                 ),
                 const SizedBox(height: 24),
                 TextField(
                   controller: _urlCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '配对链接（电脑 /pair 二维码里的地址）',
+                  decoration: InputDecoration(
+                    labelText: l10n.pairUrlLabel,
                     hintText: 'http://192.168.31.248:7788/m?token=…&live=1',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                   minLines: 1,
                   maxLines: 3,
@@ -164,9 +174,9 @@ class _ConnectScreenState extends State<ConnectScreen> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: _tokenCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'token（若链接里没带）',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: l10n.tokenLabel,
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 if (_error != null) ...[
@@ -181,7 +191,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: _connect,
-                    child: const Text('连接'),
+                    child: Text(l10n.connectButton),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -190,13 +200,13 @@ class _ConnectScreenState extends State<ConnectScreen> {
                   child: OutlinedButton.icon(
                     onPressed: _scan,
                     icon: const Icon(Icons.qr_code_scanner),
-                    label: const Text('扫码'),
+                    label: Text(l10n.scanButton),
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  '手机需与 Host 同一局域网。也可点"扫码"直接扫电脑 /pair 页面的二维码。',
-                  style: TextStyle(color: Colors.black38, fontSize: 12),
+                Text(
+                  l10n.connectFooterHint,
+                  style: const TextStyle(color: Colors.black38, fontSize: 12),
                 ),
               ],
             ),
@@ -225,7 +235,7 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
   List<SlotState> _slots = const [];
   int? _focused;
   String _reasoning = 'MED';
-  String _lcd = 'LIVE · 连接中…';
+  late String _lcd;
   LiveConnection _conn = LiveConnection.connecting;
 
   // Detects a socket that connects fine but never actually streams a
@@ -234,9 +244,15 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
   Timer? _noDataTimer;
   bool _gotFirstState = false;
 
+  /// Localizations only become available once this State is attached to the
+  /// widget tree (its BuildContext can resolve ancestor `Localizations`), so
+  /// this is a getter rather than a value cached at field-init time.
+  AppLocalizations get _l10n => AppLocalizations.of(context)!;
+
   @override
   void initState() {
     super.initState();
+    _lcd = _l10n.lcdConnecting;
     _initSpeech();
     _client = LiveClient(
       host: widget.target.host,
@@ -253,7 +269,7 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
         Haptics.instance.alert();
         final w = s.firstWhere((x) => x.state == AgentState.needsInput);
         setState(
-          () => _lcd = '${w.label ?? 'agent ${w.slotId}'} 需要你 — 选中再按 ◎✓/⊗',
+          () => _lcd = _l10n.needsInputAlert(w.label ?? 'agent ${w.slotId}'),
         );
       }
     });
@@ -262,16 +278,16 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
       (c) => setState(() {
         _conn = c;
         if (c == LiveConnection.connected) {
-          _lcd = 'LIVE · 已连接';
+          _lcd = _l10n.lcdConnected;
           _gotFirstState = false;
           _noDataTimer?.cancel();
           _noDataTimer = Timer(_noDataTimeout, () {
             if (!mounted || _gotFirstState) return;
-            setState(() => _lcd = '连上了但没数据 — 检查 Host 是否在跑 / token 是否对');
+            setState(() => _lcd = _l10n.lcdNoData);
           });
         }
         if (c == LiveConnection.disconnected) {
-          _lcd = '断线，重连中…（灯保持）';
+          _lcd = _l10n.lcdDisconnectedReconnecting;
           _noDataTimer?.cancel();
         }
       }),
@@ -326,7 +342,7 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
                   Haptics.instance.tap();
                   setState(() => _focused = id);
                   final label = _slot(id)?.label ?? 'agent $id';
-                  _flash('已选中 $label（◎✓/⊗ 只作用于它）');
+                  _flash(_l10n.selectedAgent(label));
                   _client.sendCommand(SlotCommand.focus, id);
                 },
                 onCmd: (a) {
@@ -336,23 +352,23 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
                   if ((a == 'accept' || a == 'reject' || a == 'quick') &&
                       _focused == null) {
                     Haptics.instance.alert();
-                    _flash('先点一盏 Agent 灯选中它，再按此键');
+                    _flash(_l10n.selectAgentFirstKey);
                     return;
                   }
                   if (a == 'accept') {
                     _client.sendCommand(SlotCommand.accept, _focused!);
                     Haptics.instance.success();
-                    _flash('◎✓ 接受 → agent $_focused');
+                    _flash(_l10n.acceptSent(_focused!));
                   } else if (a == 'reject') {
                     _client.sendCommand(SlotCommand.reject, _focused!);
-                    _flash('⊗ 拒绝 → agent $_focused');
+                    _flash(_l10n.rejectSent(_focused!));
                   } else if (a == 'quick') {
                     _client.sendCommand(SlotCommand.quick, _focused!);
-                    _flash('⚡ 继续（回车）→ agent $_focused');
+                    _flash(_l10n.quickSent(_focused!));
                   } else if (a == 'new_session') {
-                    _flash('💭 新会话请在电脑开 claude/codex，会自动上灯');
+                    _flash(_l10n.newSessionHint);
                   } else if (a == 'branch') {
-                    _flash('⤴ 分叉是电脑端操作');
+                    _flash(_l10n.branchHint);
                   }
                 },
                 onKnob: () {
@@ -363,7 +379,7 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
                     _reasoning =
                         levels[(levels.indexOf(_reasoning) + 1) %
                             levels.length];
-                    _lcd = '思考力度显示 $_reasoning（远程只读）';
+                    _lcd = _l10n.reasoningDisplay(_reasoning);
                   });
                 },
                 onJoy: (dir) {
@@ -373,7 +389,7 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
                     final active =
                         (_slots.map((s) => s.slotId).toList()..sort());
                     if (active.isEmpty) {
-                      _flash('暂无活跃 agent');
+                      _flash(_l10n.noActiveAgent);
                       return;
                     }
                     final cur =
@@ -385,31 +401,31 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
                             active.length];
                     setState(() => _focused = next);
                     final label = _slot(next)?.label ?? 'agent $next';
-                    _flash('焦点 → $label');
+                    _flash(_l10n.focusMoved(label));
                     _client.sendCommand(SlotCommand.focus, next);
                   } else {
-                    _flash(dir == 'up' ? '↟ 回到顶部' : '↡ 滚动日志');
+                    _flash(dir == 'up' ? _l10n.scrollTop : _l10n.scrollLog);
                   }
                 },
                 onPttStart: () {
                   _ks.pttStart();
                   if (_focused == null) {
                     Haptics.instance.alert();
-                    _flash('先点一盏 Agent 灯选中它，再按住说话');
+                    _flash(_l10n.selectAgentFirstPtt);
                     return;
                   }
                   if (!_speechAvailable) {
                     Haptics.instance.alert();
-                    _flash('语音识别不可用（模拟器或未授权），改用键盘');
+                    _flash(_l10n.speechUnavailable);
                     return;
                   }
                   _lastWords = '';
                   Haptics.instance.alert();
-                  _flash('🎙 录音中…');
+                  _flash(_l10n.recording);
                   _speech.listen(
                     onResult: (r) {
                       _lastWords = r.recognizedWords;
-                      _flash('🎙 ${r.recognizedWords}');
+                      _flash(_l10n.recordingLive(r.recognizedWords));
                     },
                     listenOptions: SpeechListenOptions(localeId: 'zh_CN'),
                   );
@@ -421,23 +437,27 @@ class _KeyboardScreenState extends State<KeyboardScreen> {
                   _speech.stop();
                   final words = _lastWords.trim();
                   if (words.isEmpty) {
-                    _flash('没听清');
+                    _flash(_l10n.didntCatchThat);
                     return;
                   }
                   _client.sendPrompt(_focused!, words);
                   Haptics.instance.success();
-                  _flash('🎙 已派活：$words');
+                  _flash(_l10n.promptSent(words));
                 },
                 onTouch: () {
                   _ks.keyUp('touch');
                   Haptics.instance.tap();
-                  _flash('触摸：嘀（长按切音色）');
+                  _flash(_l10n.touchHint);
                 },
                 onTouchLong: () async {
                   final next = _ks.profile == 'pom' ? 'pok' : 'pom';
                   await _ks.setProfile(next);
                   Haptics.instance.success();
-                  _flash('音色 → ${next == 'pom' ? 'POM 清脆轴' : 'POK 静音轴'}');
+                  _flash(
+                    _l10n.keySoundSwitched(
+                      next == 'pom' ? _l10n.keySoundPom : _l10n.keySoundPok,
+                    ),
+                  );
                 },
               ),
             ),

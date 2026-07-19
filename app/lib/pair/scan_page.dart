@@ -8,6 +8,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../l10n/app_localizations.dart';
+
 class ScanPage extends StatefulWidget {
   const ScanPage({super.key});
 
@@ -39,12 +41,13 @@ class _ScanPageState extends State<ScanPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: const Text('扫描配对二维码'),
+        title: Text(l10n.scanTitle),
       ),
       body: Stack(
         children: [
@@ -54,7 +57,7 @@ class _ScanPageState extends State<ScanPage> {
             child: Padding(
               padding: const EdgeInsets.only(bottom: 32),
               child: Text(
-                '对准电脑上 /pair 页面的二维码',
+                l10n.scanHint,
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13),
               ),
             ),

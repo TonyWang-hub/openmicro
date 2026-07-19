@@ -1,0 +1,248 @@
+{
+    "@@locale": "en",
+
+    "connectSubtitle": "Connect to your Host",
+    "@connectSubtitle": {
+        "description": "Subtitle under the app title on the connect screen"
+    },
+
+    "pairUrlLabel": "Pairing link (from the /pair QR code on your computer)",
+    "@pairUrlLabel": {
+        "description": "Label for the pairing URL text field"
+    },
+
+    "tokenLabel": "Token (if not included in the link)",
+    "@tokenLabel": {
+        "description": "Label for the token text field"
+    },
+
+    "parseErrorText": "Failed to parse: paste the pairing link (with ?token=), or fill in host:port + token",
+    "@parseErrorText": {
+        "description": "Error shown when the pairing input can't be parsed"
+    },
+
+    "connectButton": "Connect",
+    "@connectButton": {
+        "description": "Label for the connect button"
+    },
+
+    "scanButton": "Scan QR",
+    "@scanButton": {
+        "description": "Label for the scan-QR button"
+    },
+
+    "connectFooterHint": "Your phone must be on the same LAN as the Host. You can also tap \"Scan QR\" to scan the /pair page QR code on your computer directly.",
+    "@connectFooterHint": {
+        "description": "Footer hint on the connect screen"
+    },
+
+    "lcdConnecting": "LIVE · Connecting…",
+    "@lcdConnecting": {
+        "description": "LCD status text while the initial connection is being established"
+    },
+
+    "lcdConnected": "LIVE · Connected",
+    "@lcdConnected": {
+        "description": "LCD status text once connected"
+    },
+
+    "lcdNoData": "Connected but no data — check whether the Host is running / token is correct",
+    "@lcdNoData": {
+        "description": "LCD status text when connected but no state frame arrives in time"
+    },
+
+    "lcdDisconnectedReconnecting": "Disconnected, reconnecting…(lights held)",
+    "@lcdDisconnectedReconnecting": {
+        "description": "LCD status text while reconnecting after a dropped connection"
+    },
+
+    "needsInputAlert": "{name} needs you — select it, then press ◎✓/⊗",
+    "@needsInputAlert": {
+        "description": "LCD alert when an agent slot transitions to needing input",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+
+    "selectedAgent": "Selected {name} (◎✓/⊗ only affects it)",
+    "@selectedAgent": {
+        "description": "LCD feedback after tapping an agent light",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+
+    "selectAgentFirstKey": "Tap an Agent light to select it first, then press this key",
+    "@selectAgentFirstKey": {
+        "description": "LCD feedback when a command key is pressed with no focused agent"
+    },
+
+    "acceptSent": "◎✓ Accept → agent {slot}",
+    "@acceptSent": {
+        "description": "LCD feedback after sending the accept command",
+        "placeholders": {
+            "slot": {
+                "type": "int"
+            }
+        }
+    },
+
+    "rejectSent": "⊗ Reject → agent {slot}",
+    "@rejectSent": {
+        "description": "LCD feedback after sending the reject command",
+        "placeholders": {
+            "slot": {
+                "type": "int"
+            }
+        }
+    },
+
+    "quickSent": "⚡ Continue (Enter) → agent {slot}",
+    "@quickSent": {
+        "description": "LCD feedback after sending the quick-continue command",
+        "placeholders": {
+            "slot": {
+                "type": "int"
+            }
+        }
+    },
+
+    "newSessionHint": "💭 Start a new session on your computer with claude/codex — it lights up automatically",
+    "@newSessionHint": {
+        "description": "LCD feedback for the new-session key"
+    },
+
+    "branchHint": "⤴ Branching is a computer-side action",
+    "@branchHint": {
+        "description": "LCD feedback for the branch key"
+    },
+
+    "reasoningDisplay": "Reasoning level shown: {level} (remote read-only)",
+    "@reasoningDisplay": {
+        "description": "LCD feedback after turning the reasoning knob",
+        "placeholders": {
+            "level": {
+                "type": "String"
+            }
+        }
+    },
+
+    "noActiveAgent": "No active agent",
+    "@noActiveAgent": {
+        "description": "LCD feedback when the joystick is used with no active agents"
+    },
+
+    "focusMoved": "Focus → {name}",
+    "@focusMoved": {
+        "description": "LCD feedback after moving focus with the joystick",
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+
+    "scrollTop": "↟ Back to top",
+    "@scrollTop": {
+        "description": "LCD feedback for joystick up"
+    },
+
+    "scrollLog": "↡ Scroll log",
+    "@scrollLog": {
+        "description": "LCD feedback for joystick down"
+    },
+
+    "selectAgentFirstPtt": "Tap an Agent light to select it first, then hold to speak",
+    "@selectAgentFirstPtt": {
+        "description": "LCD feedback when push-to-talk is started with no focused agent"
+    },
+
+    "speechUnavailable": "Speech recognition unavailable (simulator or not authorized) — use the keyboard instead",
+    "@speechUnavailable": {
+        "description": "LCD feedback when speech recognition isn't available"
+    },
+
+    "recording": "🎙 Recording…",
+    "@recording": {
+        "description": "LCD feedback while push-to-talk is recording"
+    },
+
+    "recordingLive": "🎙 {words}",
+    "@recordingLive": {
+        "description": "LCD live partial-transcript feedback while push-to-talk is recording",
+        "placeholders": {
+            "words": {
+                "type": "String"
+            }
+        }
+    },
+
+    "didntCatchThat": "Didn't catch that",
+    "@didntCatchThat": {
+        "description": "LCD feedback when push-to-talk captured no words"
+    },
+
+    "promptSent": "🎙 Sent: {words}",
+    "@promptSent": {
+        "description": "LCD feedback after sending a voice-dictated prompt",
+        "placeholders": {
+            "words": {
+                "type": "String"
+            }
+        }
+    },
+
+    "touchHint": "Touch: beep (long-press to switch key sound)",
+    "@touchHint": {
+        "description": "LCD feedback for a plain touch key press"
+    },
+
+    "keySoundSwitched": "Key sound → {profile}",
+    "@keySoundSwitched": {
+        "description": "LCD feedback after switching the key sound profile",
+        "placeholders": {
+            "profile": {
+                "type": "String"
+            }
+        }
+    },
+
+    "keySoundPom": "POM Crisp",
+    "@keySoundPom": {
+        "description": "Name of the POM key sound profile"
+    },
+
+    "keySoundPok": "POK Silent",
+    "@keySoundPok": {
+        "description": "Name of the POK key sound profile"
+    },
+
+    "scanTitle": "Scan pairing QR code",
+    "@scanTitle": {
+        "description": "AppBar title on the QR scan page"
+    },
+
+    "scanHint": "Point at the QR code on your computer's /pair page",
+    "@scanHint": {
+        "description": "Hint text overlaid on the QR scan page"
+    },
+
+    "bannerConnecting": "Connecting…",
+    "@bannerConnecting": {
+        "description": "Connection banner text while connecting"
+    },
+
+    "bannerDisconnected": "Connection lost, reconnecting…",
+    "@bannerDisconnected": {
+        "description": "Connection banner text while disconnected and reconnecting"
+    },
+
+    "emptyAgentsHint": "No active agent — opening claude/codex on your computer will light one up automatically",
+    "@emptyAgentsHint": {
+        "description": "Empty-state hint shown above the keyboard when no agent slots are active"
+    }
+}

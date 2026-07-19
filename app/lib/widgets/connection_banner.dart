@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../keyboard/device.dart';
+import '../l10n/app_localizations.dart';
 import '../model/slot.dart';
 
 /// Thin status banner shown above the keyboard whenever the Host connection
@@ -12,15 +13,16 @@ class ConnectionBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final String? text;
     final Color color;
     switch (connection) {
       case LiveConnection.connecting:
-        text = '连接中…';
+        text = l10n.bannerConnecting;
         color = DeviceKeyboard.needs;
         break;
       case LiveConnection.disconnected:
-        text = '连接断开，重连中…';
+        text = l10n.bannerDisconnected;
         color = DeviceKeyboard.error;
         break;
       case LiveConnection.connected:

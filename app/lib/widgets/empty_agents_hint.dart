@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
+
 /// Friendly empty-state shown above the keyboard when no agent session is
 /// currently lit up, so a bank of idle gray keys doesn't read as "broken".
 class EmptyAgentsHint extends StatelessWidget {
@@ -20,10 +22,10 @@ class EmptyAgentsHint extends StatelessWidget {
         children: [
           const Icon(Icons.info_outline, size: 18, color: Color(0xFF8A919B)),
           const SizedBox(width: 8),
-          const Expanded(
+          Expanded(
             child: Text(
-              '暂无活跃 agent — 在电脑上开 claude/codex 会自动上灯',
-              style: TextStyle(color: Color(0xFF5A6270), fontSize: 12.5),
+              AppLocalizations.of(context)!.emptyAgentsHint,
+              style: const TextStyle(color: Color(0xFF5A6270), fontSize: 12.5),
             ),
           ),
         ],
