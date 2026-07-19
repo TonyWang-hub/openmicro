@@ -40,6 +40,62 @@
     let director = null;
     let live = null;
 
+    // --- Live 语音派活：Web Speech API（spec §「网页」） ---
+    /** 当前识别会话，null=未在录音。 */
+    let recognition = null;
+    /** 已确认（isFinal）的转写文字，跨 onresult 事件累积。 */
+    let sttFinalText = '';
+    /** 防止 onend/onerror 都触发导致重复 finish。 */
+    let sttFinished = false;
+
+    /** 识别结束（正常 stop 或出错）后统一收口：读闭包里的 final 文字并决定是否派活。
+     * 之所以不在 onPttEnd 里直接读 sttFinalText，是因为 onresult 是异步的——
+     * 松开按钮调 recognition.stop() 后，最后一段 isFinal 结果可能还没到，
+     * 浏览器保证它在 onend 之前触发，所以真正的收口逻辑放在 onend（onerror 兜底）里。 */
+    function finishPtt() {
+      if (sttFinished) return;
+      sttFinished = true;
+      const text = sttFinalText.trim();
+      recognition = null;
+      if (!text) {
+        kbd.flashLcd('没听清');
+        return;
+      }
+      live?.sendCommand('prompt', focusedSlot, text);
+      kbd.flashLcd(`🎙 已派活：${text}`);
+    }
+
+    function startSpeechRecognition() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        kbd.flashLcd('此浏览器不支持语音，用键盘');
+        return;
+      }
+      sttFinalText = '';
+      sttFinished = false;
+      try {
+        recognition = new SR();
+        recognition.lang = 'zh-CN';
+        recognition.interimResults = true;
+        recognition.continuous = false;
+        recognition.onresult = (ev) => {
+          let interim = '';
+          for (let i = ev.resultIndex; i < ev.results.length; i++) {
+            const r = ev.results[i];
+            if (r.isFinal) sttFinalText += r[0].transcript;
+            else interim += r[0].transcript;
+          }
+          kbd.setLcd(`🎙 ${sttFinalText}${interim}`);
+        };
+        recognition.onend = finishPtt;
+        recognition.onerror = finishPtt;
+        recognition.start();
+      } catch {
+        recognition = null;
+        kbd.flashLcd('此浏览器不支持语音，用键盘');
+      }
+    }
+
     const kbd = createToyKeyboard({
       root: document.getElementById('root'),
       handlers: {
@@ -83,11 +139,25 @@
         },
         onPttStart() {
           audio.pttStart(); haptic('alert');
+          if (liveMode) {
+            if (focusedSlot === null) {
+              kbd.flashLcd('先选中一盏 Agent 灯再语音');
+              return;
+            }
+            startSpeechRecognition();
+          }
         },
         onPttEnd() {
           audio.pttStop(); haptic('press');
-          if (liveMode) kbd.flashLcd('Live 语音二期 — 先用键盘吧', 'LIVE');
-          else director?.voicePrompt(focusedSlot);
+          if (liveMode) {
+            // 未聚焦 / 不支持 / 启动失败时 recognition 为 null，什么都不做。
+            if (recognition) {
+              try { recognition.stop(); } catch { /* ignore */ }
+            }
+            // 收口在 recognition.onend（见 finishPtt），这里只负责喊停。
+            return;
+          }
+          director?.voicePrompt(focusedSlot);
         },
         onKnob(level) {
           audio.knobTick(); haptic('detent');

@@ -8,7 +8,7 @@
  *   onLcd: (text: string) => void,
  *   onConnection: (s: 'connected'|'connecting'|'disconnected') => void,
  * }} options
- * @returns {{ sendCommand: (action: string, slotId: number) => void, close: () => void }}
+ * @returns {{ sendCommand: (action: string, slotId: number, text?: string) => void, close: () => void }}
  */
 export function connectLive({ token, onState, onLcd, onConnection }) {
   /** Map host light states to toy states (host never sends unknown to bound slots
@@ -69,9 +69,11 @@ export function connectLive({ token, onState, onLcd, onConnection }) {
   connect();
 
   return {
-    sendCommand(action, slotId) {
+    sendCommand(action, slotId, text) {
       if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'command', payload: { action, slotId } }));
+        const payload = { action, slotId };
+        if (text != null) payload.text = text;
+        ws.send(JSON.stringify({ type: 'command', payload }));
       } else {
         onLcd('未连接：指令没发出去');
       }
