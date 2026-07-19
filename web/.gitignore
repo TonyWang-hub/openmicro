@@ -1,0 +1,4 @@
+# Playwright 冒烟测的运行产物（trace/报告），根 .gitignore 未覆盖，仅 web/ 内需要。
+test-results/
+playwright-report/
+blob-report/

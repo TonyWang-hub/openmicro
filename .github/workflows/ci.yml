@@ -46,6 +46,32 @@ jobs:
         working-directory: web
         run: node --test "test/**/*.test.js"
 
+  web-e2e:
+    name: Web demo E2E (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+
+      - name: Run demo smoke test
+        working-directory: web
+        run: npm run test:e2e
+
   app:
     name: App (Flutter)
     runs-on: ubuntu-latest
@@ -64,7 +90,10 @@ jobs:
 
       - name: Run tests
         working-directory: app
-        run: flutter test
+        # Golden (screenshot) tests are excluded: they're a local visual
+        # regression tool and macOS/Linux font rendering differences make
+        # pixel comparisons unreliable in CI. See test/device_golden_test.dart.
+        run: flutter test --exclude-tags golden
 
       - name: Analyze
         working-directory: app

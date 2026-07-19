@@ -1,0 +1,14 @@
+# Test runner configuration.
+#
+# `golden` tags device_golden_test.dart's screenshot-regression tests. They
+# are local-only: macOS vs Linux font/anti-aliasing differences make pixel
+# goldens unreliable across platforms, so CI runs
+# `flutter test --exclude-tags golden` (see .github/workflows/ci.yml) and
+# golden baselines should only be generated/refreshed on the platform you
+# intend to compare against (currently macOS, by hand):
+#   flutter test --update-goldens --tags golden
+tags:
+  golden:
+    description: >-
+      Screenshot (golden) regression tests. Excluded from CI because pixel
+      output isn't stable across macOS/Linux font rendering.
