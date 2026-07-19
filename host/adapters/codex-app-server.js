@@ -2,7 +2,7 @@
  * Optional Codex app-server ingest (default off).
  * Status mapping only — no task-dispatch UI.
  *
- * Status ideas mirrored from a companion app-server event-stream client:
+ * Status vocabulary mirrors a typical app-server event-stream client:
  *   running | awaiting_approval | succeeded | failed | cancelled
  * → mapCodexAppServerStatus → store.applyEvent
  */
